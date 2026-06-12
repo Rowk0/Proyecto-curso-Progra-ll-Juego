@@ -16,6 +16,9 @@
 
 //Si no funciona la pantalla, poner "wsl --shutdown" en powershell y luego "code ."
 
+//flujo git
+//git add . -> git commit -m "cambios" -> git push.
+
 void leerMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
 
