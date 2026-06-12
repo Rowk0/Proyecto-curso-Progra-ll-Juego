@@ -4,9 +4,14 @@
 #include <allegro5/allegro_image.h>
 #define FILAS 19
 #define COLUMNAS 30
-#define TAMAÑO 64
+#define TAMANHO 64
 #define TAMANO_MAPA 9
 
+//Leer el mapa desde un archivo (prox. jueves).
+//Crear funcion que cargue el archivo.
+//Cargar un sprite, al personaje.
+
+//Hacer una estructura al jugador
 
 //gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image
 //para compilar
@@ -16,22 +21,51 @@
 
 //Si no funciona la pantalla, poner "wsl --shutdown" en powershell y luego "code ."
 
-//flujo git
+//flujo git (antes ctrl + s para guardar archivo local)
 //git add . -> git commit -m "cambios" -> git push.
 
-//probando texto para ver como funciona mejor github
+//hacer un makefile para abrir el ejecutable de inmediato
 
 void leerMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
 
+//Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
+//Ultimo cuatro representa otro cuadrado con otros parametros
+//Compara si hay entre colicion entre ambos, y si hay devuelve true
+bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
+{
+	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
+}
+
 typedef struct
 {
-	bool activa; //De predeterminado todas las habitaciones estan inactivas, se activan al entrar a ellas
+	bool activa; //Las activas se muestran en pantalla
 	bool visitada; //Más adelante para hacer un minimapa
-	int tipo; //0 = normal, 1 = vendedor, 2 = cofre, 3 = jefe
+	int tipo; //0 = normal, 1 = especial, 2 = jefe, por ejemplo. Cada tipo tendrá su habitacion propia
 } habitacion; 
 
 habitacion mazmorra[TAMANO_MAPA][TAMANO_MAPA];
+
+char test[FILAS][COLUMNAS] = 
+{
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"      #                       ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              ",
+	"                              "
+};
 
 char mapa[FILAS][COLUMNAS] = 
 {
@@ -42,8 +76,8 @@ char mapa[FILAS][COLUMNAS] =
 	"#                            #",
 	"#                            #",
 	"#                            #",
-	"#                            #",
-	"#                            #",
+	"#      ##                    #",
+	"#      ##                    #",
 	"#                            #",
 	"#                            #",
 	"#                            #",
@@ -75,7 +109,7 @@ char mapa2[FILAS][COLUMNAS] =
 	"##############  ##############"
 };
 
-int jugadorPosX = 1000, jugadorPosY = 500, velocidad = 5;
+int jugadorPosX = 500, jugadorPosY = 500, velocidad = 5;
 
 int main(int argc, char **argv)
 { 
@@ -158,7 +192,7 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			leerMapa(mapa);
+			leerMapa(test);
 		}
 
 		//Jugador
@@ -194,7 +228,7 @@ void InicializarHabitaciones()
 	mazmorra[(TAMANO_MAPA + 1) / 2][(TAMANO_MAPA + 1) / 2].visitada = true;
 	mazmorra[(TAMANO_MAPA + 1) / 2][(TAMANO_MAPA + 1) / 2].tipo = 0;
 
-	//Hacer un codigo donde busque caminos alrededor de la habitacion central y active habitaciones segun la cantidad deseada
+	//Hacer un codigo donde busque caminos alrededor de la habitacion central y genere habitaciones segun la cantidad deseada
 }
 
 void leerMapa(char mapa[FILAS][COLUMNAS])
@@ -206,14 +240,15 @@ void leerMapa(char mapa[FILAS][COLUMNAS])
 		{
 			if (mapa[i][j] == '#')
 			{
-				al_draw_filled_rectangle(j * TAMAÑO, i * TAMAÑO, j * TAMAÑO + TAMAÑO, i * TAMAÑO + TAMAÑO, al_map_rgb(245, 73, 39));
+				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
 
-				//colision de #
-				
+				if (Colicion(jugadorPosX, jugadorPosY, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
+				{
+					jugadorPosX = jugadorPosX + 1;
+				}
 			}
+
 		}
 		printf("\n");
 	}
 }
-
-//makefile
