@@ -19,6 +19,8 @@
 //flujo git
 //git add . -> git commit -m "cambios" -> git push.
 
+//probando texto para ver como funciona mejor github
+
 void leerMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
 
