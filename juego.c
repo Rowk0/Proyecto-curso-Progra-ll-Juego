@@ -45,26 +45,24 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 
 char mapa2[FILAS][COLUMNAS] = 
 {
-	"##############  ##############",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"##############  ##############"
+	"##############..##############",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"#............................#",
+	"##############..##############"
 };
-
-char mapaArchivo[FILAS][COLUMNAS];
 
 typedef struct
 {
@@ -89,24 +87,22 @@ int main(int argc, char **argv)
 { 
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
 
-	int cantidadDatos = 0;
 	FILE *dataMapas;
+
+	char mapaArchivo[FILAS][COLUMNAS];
 
 	if ((dataMapas = fopen("mapas.txt","r")) == NULL)
 	{
 		return 0;
 	} 
 
-	while(!feof(dataMapas))
+	for (int i = 0; i < FILAS; i++) 
 	{
-		if ( fread(&mapaArchivo, sizeof(mapa2), 1, dataMapas) < 1)
+    	for (int j = 0; j < COLUMNAS; j++) 
 		{
-			//Error al leer
-		}
-		else
-		{
-			cantidadDatos ++;
-		}
+			//fscanf ignora los espacios y saltos de lineas 
+        	fscanf(dataMapas, " %c", &mapaArchivo[i][j]);
+    	}
 	}
 
 	personaje.posX = 500;
@@ -192,8 +188,6 @@ int main(int argc, char **argv)
 
 		al_rest(0.016); //Hacer descansar el cpu
 	}
-
-	printf("%d", cantidadDatos);
 
 	return 0;
 }
