@@ -5,7 +5,10 @@
 #define FILAS 19
 #define COLUMNAS 30
 #define TAMANHO 64
-#define TAMANO_MAPA 9
+#define TAMANHO_MAPA 9
+
+ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
+ALLEGRO_MOUSE_STATE estadoMouse;
 
 //Leer el mapa desde un archivo (prox. jueves).
 //Crear funcion que cargue el archivo.
@@ -37,57 +40,6 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
 }
 
-typedef struct
-{
-	bool activa; //Las activas se muestran en pantalla
-	bool visitada; //Más adelante para hacer un minimapa
-	int tipo; //0 = normal, 1 = especial, 2 = jefe, por ejemplo. Cada tipo tendrá su habitacion propia
-} habitacion; 
-
-habitacion mazmorra[TAMANO_MAPA][TAMANO_MAPA];
-
-char test[FILAS][COLUMNAS] = 
-{
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"      #                       ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              ",
-	"                              "
-};
-
-char mapa[FILAS][COLUMNAS] = 
-{
-	"##############  ##############",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#      ##                    #",
-	"#      ##                    #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"#                            #",
-	"##############################"
-};
-
 char mapa2[FILAS][COLUMNAS] = 
 {
 	"##############  ##############",
@@ -109,11 +61,34 @@ char mapa2[FILAS][COLUMNAS] =
 	"##############  ##############"
 };
 
-int jugadorPosX = 500, jugadorPosY = 500, velocidad = 5;
+typedef struct
+{
+	bool activa; //Las activas se muestran en pantalla
+	bool visitada; //Más adelante para hacer un minimapa
+	int tipo; //0 = normal, 1 = especial, 2 = jefe, por ejemplo. Cada tipo tendrá su habitacion propia
+} habitacion; 
+
+habitacion mazmorra[TAMANHO_MAPA][TAMANHO_MAPA];
+
+typedef struct 
+{
+	int posX;
+	int posY;
+	int velocidad;
+	bool movimiento;
+} jugador;
+
+jugador personaje;
 
 int main(int argc, char **argv)
 { 
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
+
+	personaje.posX = 500;
+	personaje.posY = 500;
+	personaje.velocidad = 5;
+	personaje.movimiento = true;
+
 
 	//Inicializar dibujos
 	al_init_primitives_addon();
@@ -138,9 +113,6 @@ int main(int argc, char **argv)
 	//Guardar imagenes
 	ALLEGRO_BITMAP *fondo = al_load_bitmap("test.png");
 
-	ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
-	ALLEGRO_MOUSE_STATE estadoMouse;
-
 	while (1)
 	{
 		al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
@@ -149,54 +121,43 @@ int main(int argc, char **argv)
 		posXMouse = estadoMouse.x;
 		posYMouse = estadoMouse.y;
 
-		if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
+		if (personaje.movimiento)
 		{
-			break;
-		}
-		
-		if(al_key_down(&estado, ALLEGRO_KEY_W))
-		{
-			jugadorPosY -= velocidad; 
-		}
+			if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
+			{
+				break;
+			}
+			
+			if(al_key_down(&estado, ALLEGRO_KEY_W))
+			{
+				personaje.posY -= personaje.velocidad; 
+			}
 
-		if(al_key_down(&estado, ALLEGRO_KEY_S))
-		{
-			jugadorPosY += velocidad; 
-		}
+			if(al_key_down(&estado, ALLEGRO_KEY_S))
+			{
+				personaje.posY += personaje.velocidad; 
+			}
 
-		if(al_key_down(&estado, ALLEGRO_KEY_D))
-		{
-			jugadorPosX += velocidad; 
-		}
+			if(al_key_down(&estado, ALLEGRO_KEY_D))
+			{
+				personaje.posX += personaje.velocidad; 
+			}
 
-		if(al_key_down(&estado, ALLEGRO_KEY_A))
-		{
-			jugadorPosX -= velocidad; 
+			if(al_key_down(&estado, ALLEGRO_KEY_A))
+			{
+				personaje.posX -= personaje.velocidad; 
+			}
 		}
-
-		//Ajustar más adelante para que el limite sea "#" 
-		/*if (jugadorPosX < 0) jugadorPosX = 0;
-		if (jugadorPosY < 0) jugadorPosY = 0;
-		if (jugadorPosX > 1856) jugadorPosX = 1856;
-		if (jugadorPosY > 1024) jugadorPosY = 1024;*/
 
 		al_get_mouse_num_axes();
 
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		//Cambio de escenario, hacer que cambie al entrar a la puerta
-		if (jugadorPosX > 1856 / 2)
-		{
-			leerMapa(mapa2);
-		}
-		else
-		{
-			leerMapa(test);
-		}
+		leerMapa(mapa2);
 
 		//Jugador
-		al_draw_filled_rectangle(jugadorPosX, jugadorPosY, jugadorPosX + 64, jugadorPosY + 64, al_map_rgb(0, 255, 255));
+		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
 		
 		//Puntero del mouse
 		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
@@ -212,9 +173,9 @@ int main(int argc, char **argv)
 
 void InicializarHabitaciones()
 {
-	for (int i = 0; i < TAMANO_MAPA; i++)
+	for (int i = 0; i < TAMANHO_MAPA; i++)
 	{
-		for (int j = 0; j < TAMANO_MAPA; j++)
+		for (int j = 0; j < TAMANHO_MAPA; j++)
 		{
 			mazmorra[i][j].activa = false;
 			mazmorra[i][j].visitada = false;
@@ -224,9 +185,9 @@ void InicializarHabitaciones()
 
 	//Como el mapa es 9x9, la habitacion central es la 5,5
 	//Sala de spawn, por lo que se activa desde el inicio
-	mazmorra[(TAMANO_MAPA + 1) / 2][(TAMANO_MAPA + 1) / 2].activa = true;
-	mazmorra[(TAMANO_MAPA + 1) / 2][(TAMANO_MAPA + 1) / 2].visitada = true;
-	mazmorra[(TAMANO_MAPA + 1) / 2][(TAMANO_MAPA + 1) / 2].tipo = 0;
+	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].activa = true;
+	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].visitada = true;
+	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].tipo = 0;
 
 	//Hacer un codigo donde busque caminos alrededor de la habitacion central y genere habitaciones segun la cantidad deseada
 }
@@ -242,9 +203,34 @@ void leerMapa(char mapa[FILAS][COLUMNAS])
 			{
 				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
 
-				if (Colicion(jugadorPosX, jugadorPosY, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
+				//Movimiento tosco al tocar el limite.
+				if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
 				{
-					jugadorPosX = jugadorPosX + 1;
+					if(al_key_down(&estado, ALLEGRO_KEY_W))
+					{
+						personaje.posY += personaje.velocidad; 
+					}
+
+					if(al_key_down(&estado, ALLEGRO_KEY_S))
+					{
+						personaje.posY -= personaje.velocidad; 
+					}
+
+					if(al_key_down(&estado, ALLEGRO_KEY_D))
+					{
+						personaje.posX -= personaje.velocidad; 
+					}
+
+					if(al_key_down(&estado, ALLEGRO_KEY_A))
+					{
+						personaje.posX += personaje.velocidad; 
+					}
+
+					personaje.movimiento = false;
+				}
+				else 
+				{
+					personaje.movimiento = true;
 				}
 			}
 
