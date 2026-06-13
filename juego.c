@@ -2,7 +2,7 @@
 #include <allegro5/allegro.h> 
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
-#define FILAS 19
+#define FILAS 17
 #define COLUMNAS 30
 #define TAMANHO 64
 #define TAMANHO_MAPA 9
@@ -10,11 +10,14 @@
 ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
 ALLEGRO_MOUSE_STATE estadoMouse;
 
+////////////////////////////////////////////////////////////////  tareas
+
 //Leer el mapa desde un archivo (prox. jueves).
 //Crear funcion que cargue el archivo.
 //Cargar un sprite, al personaje.
+//hacer un makefile para abrir el ejecutable de inmediato
 
-//Hacer una estructura al jugador
+/////////////////////////////////////////////////////////////////  flujo trabajo
 
 //gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image
 //para compilar
@@ -27,7 +30,7 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 //flujo git (antes ctrl + s para guardar archivo local)
 //git add . -> git commit -m "cambios" -> git push.
 
-//hacer un makefile para abrir el ejecutable de inmediato
+/////////////////////////////////////////////////////////////////
 
 void leerMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
@@ -61,6 +64,8 @@ char mapa2[FILAS][COLUMNAS] =
 	"##############  ##############"
 };
 
+char mapaArchivo[FILAS][COLUMNAS];
+
 typedef struct
 {
 	bool activa; //Las activas se muestran en pantalla
@@ -83,6 +88,26 @@ jugador personaje;
 int main(int argc, char **argv)
 { 
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
+
+	int cantidadDatos = 0;
+	FILE *dataMapas;
+
+	if ((dataMapas = fopen("mapas.txt","r")) == NULL)
+	{
+		return 0;
+	} 
+
+	while(!feof(dataMapas))
+	{
+		if ( fread(&mapaArchivo, sizeof(mapa2), 1, dataMapas) < 1)
+		{
+			//Error al leer
+		}
+		else
+		{
+			cantidadDatos ++;
+		}
+	}
 
 	personaje.posX = 500;
 	personaje.posY = 500;
@@ -154,7 +179,7 @@ int main(int argc, char **argv)
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		leerMapa(mapa2);
+		leerMapa(mapaArchivo);
 
 		//Jugador
 		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
@@ -167,6 +192,8 @@ int main(int argc, char **argv)
 
 		al_rest(0.016); //Hacer descansar el cpu
 	}
+
+	printf("%d", cantidadDatos);
 
 	return 0;
 }
@@ -203,7 +230,7 @@ void leerMapa(char mapa[FILAS][COLUMNAS])
 			{
 				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
 
-				//Movimiento tosco al tocar el limite.
+				//Limite de colision entre personaje y pared
 				if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
 				{
 					if(al_key_down(&estado, ALLEGRO_KEY_W))
