@@ -6,14 +6,14 @@
 #define COLUMNAS 30
 #define TAMANHO 64
 #define TAMANHO_MAPA 9
+#define LARGO_TEXTO 30
 
 ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
 ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Leer el mapa desde un archivo (prox. jueves).
-//Crear funcion que cargue el archivo.
+//Organizar funcion cargar archivo mapa
 //Cargar un sprite, al personaje.
 //hacer un makefile para abrir el ejecutable de inmediato
 
@@ -30,10 +30,11 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 //flujo git (antes ctrl + s para guardar archivo local)
 //git add . -> git commit -m "cambios" -> git push.
 
-/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////  funciones
 
 void leerMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
+char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -43,26 +44,7 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
 }
 
-char mapa2[FILAS][COLUMNAS] = 
-{
-	"##############..##############",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"#............................#",
-	"##############..##############"
-};
+/////////////////////////////////////////////////////////////////////////////   estructuras
 
 typedef struct
 {
@@ -83,33 +65,25 @@ typedef struct
 
 jugador personaje;
 
+//////////////////////////////////////////////////////////////////////////////////////////// main
+
 int main(int argc, char **argv)
 { 
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
 
-	FILE *dataMapas;
+	FILE *archivoMapas;
+	char *nombreHabitacion[LARGO_TEXTO];
 
-	char mapaArchivo[FILAS][COLUMNAS];
+	nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
 
-	if ((dataMapas = fopen("mapas.txt","r")) == NULL)
-	{
-		return 0;
-	} 
+	char habitacion[FILAS][COLUMNAS];
 
-	for (int i = 0; i < FILAS; i++) 
-	{
-    	for (int j = 0; j < COLUMNAS; j++) 
-		{
-			//fscanf ignora los espacios y saltos de lineas 
-        	fscanf(dataMapas, " %c", &mapaArchivo[i][j]);
-    	}
-	}
+	cargarMapa(nombreHabitacion, archivoMapas, habitacion);
 
 	personaje.posX = 500;
 	personaje.posY = 500;
 	personaje.velocidad = 5;
 	personaje.movimiento = true;
-
 
 	//Inicializar dibujos
 	al_init_primitives_addon();
@@ -175,7 +149,7 @@ int main(int argc, char **argv)
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		leerMapa(mapaArchivo);
+		leerMapa(habitacion);
 
 		//Jugador
 		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
@@ -190,6 +164,25 @@ int main(int argc, char **argv)
 	}
 
 	return 0;
+}
+
+char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS])
+{
+
+	if ((archivoMapa = fopen(nombreMapa[LARGO_TEXTO],"r")) == NULL)
+	{
+		return 0;
+	} 
+
+	for (int i = 0; i < FILAS; i++) 
+	{
+    	for (int j = 0; j < COLUMNAS; j++) 
+		{
+			//fscanf ignora los espacios y saltos de lineas 
+        	fscanf(archivoMapa, " %c", &mapa[i][j]);
+    	}
+	}
+	
 }
 
 void InicializarHabitaciones()
