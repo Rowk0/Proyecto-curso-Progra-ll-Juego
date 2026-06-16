@@ -13,8 +13,6 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Organizar funcion cargar archivo mapa
-//Cargar un sprite, al personaje.
 //hacer un makefile para abrir el ejecutable de inmediato
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
@@ -82,7 +80,7 @@ int main(int argc, char **argv)
 
 	personaje.posX = 500;
 	personaje.posY = 500;
-	personaje.velocidad = 5;
+	personaje.velocidad = 7;
 	personaje.movimiento = true;
 
 	//Inicializar dibujos
@@ -105,8 +103,14 @@ int main(int argc, char **argv)
     ALLEGRO_DISPLAY *ventana = al_create_display(640, 480);
     if(!ventana) return -1;
 
-	//Guardar imagenes
-	ALLEGRO_BITMAP *fondo = al_load_bitmap("test.png");
+	//Cargar imagenes
+	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Montiel.png");
+
+	//Si no hay nada en spriteJugador se devuelve
+	if(!spriteJugador)
+	{
+		return -1;
+	}
 
 	while (1)
 	{
@@ -152,7 +156,13 @@ int main(int argc, char **argv)
 		leerMapa(habitacion);
 
 		//Jugador
-		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
+		//al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
+
+		//Jugador
+		//al_draw_bitmap(spriteJugador, personaje.posX, personaje.posY, 0);
+
+		//Jugador
+		al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
 		
 		//Puntero del mouse
 		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
@@ -218,7 +228,7 @@ void leerMapa(char mapa[FILAS][COLUMNAS])
 				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
 
 				//Limite de colision entre personaje y pared
-				if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
+				if (Colicion(personaje.posX, personaje.posY, 128, 128, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
 				{
 					if(al_key_down(&estado, ALLEGRO_KEY_W))
 					{
