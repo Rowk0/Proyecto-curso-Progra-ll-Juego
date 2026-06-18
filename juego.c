@@ -30,17 +30,15 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 /////////////////////////////////////////////////////////////////  funciones
 
-void leerMapa(char mapa[FILAS][COLUMNAS]);
+void DibujarMapa(char mapa[FILAS][COLUMNAS]);
 void InicializarHabitaciones();
 char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
+bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
-bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
-{
-	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
-}
+bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 /////////////////////////////////////////////////////////////////////////////   estructuras
 
@@ -69,7 +67,7 @@ int main(int argc, char **argv)
 { 
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
 
-	FILE *archivoMapas;
+	FILE *archivoMapas = NULL;
 	char *nombreHabitacion[LARGO_TEXTO];
 
 	nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
@@ -104,7 +102,7 @@ int main(int argc, char **argv)
     if(!ventana) return -1;
 
 	//Cargar imagenes
-	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Montiel.png");
+	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
 
 	//Si no hay nada en spriteJugador se devuelve
 	if(!spriteJugador)
@@ -120,49 +118,74 @@ int main(int argc, char **argv)
 		posXMouse = estadoMouse.x;
 		posYMouse = estadoMouse.y;
 
-		if (personaje.movimiento)
+		int auxX = personaje.posX;
+		int auxY = personaje.posY;
+		int predict = 5;
+		
+		/////////////////////////////////////////////////////// funciones jugador
+		
+		if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
 		{
-			if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
-			{
-				break;
-			}
-			
-			if(al_key_down(&estado, ALLEGRO_KEY_W))
-			{
-				personaje.posY -= personaje.velocidad; 
-			}
-
-			if(al_key_down(&estado, ALLEGRO_KEY_S))
-			{
-				personaje.posY += personaje.velocidad; 
-			}
-
-			if(al_key_down(&estado, ALLEGRO_KEY_D))
-			{
-				personaje.posX += personaje.velocidad; 
-			}
-
-			if(al_key_down(&estado, ALLEGRO_KEY_A))
-			{
-				personaje.posX -= personaje.velocidad; 
-			}
+			break;
 		}
 
+		if(al_key_down(&estado, ALLEGRO_KEY_W))
+		{
+			personaje.posY -= personaje.velocidad; 
+		}
+
+		if(al_key_down(&estado, ALLEGRO_KEY_S))
+		{
+			personaje.posY += personaje.velocidad; 
+		}
+
+		bool colisionY = ColisionMapa(habitacion, personaje.posX, personaje.posY) || 
+                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY) ||
+                          ColisionMapa(habitacion, personaje.posX, personaje.posY + TAMANHO - 1) ||
+                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1);
+
+		if (colisionY)
+		{
+			personaje.posY = auxY;
+		}
+
+		if(al_key_down(&estado, ALLEGRO_KEY_D))
+		{
+			personaje.posX += personaje.velocidad; 
+		}
+
+		if(al_key_down(&estado, ALLEGRO_KEY_A))
+		{
+			personaje.posX -= personaje.velocidad; 
+		}
+
+		bool colisionX = ColisionMapa(habitacion, personaje.posX, personaje.posY) || 
+                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY) ||
+                          ColisionMapa(habitacion, personaje.posX, personaje.posY + TAMANHO - 1) ||
+                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1);
+
+		if (colisionX)
+		{
+			personaje.posX = auxX;
+		}
+		
+		//////////////////////////////////////////////////
+	
 		al_get_mouse_num_axes();
 
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		leerMapa(habitacion);
+		DibujarMapa(habitacion);
 
 		//Jugador
-		//al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
+		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
 
 		//Jugador
 		//al_draw_bitmap(spriteJugador, personaje.posX, personaje.posY, 0);
 
 		//Jugador
-		al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
+		//al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
 		
 		//Puntero del mouse
 		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
@@ -216,7 +239,7 @@ void InicializarHabitaciones()
 	//Hacer un codigo donde busque caminos alrededor de la habitacion central y genere habitaciones segun la cantidad deseada
 }
 
-void leerMapa(char mapa[FILAS][COLUMNAS])
+void DibujarMapa(char mapa[FILAS][COLUMNAS])
 {
 
 	for (int i = 0; i < FILAS; i++)
@@ -227,38 +250,31 @@ void leerMapa(char mapa[FILAS][COLUMNAS])
 			{
 				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
 
-				//Limite de colision entre personaje y pared
-				if (Colicion(personaje.posX, personaje.posY, 128, 128, j * TAMANHO, i * TAMANHO, TAMANHO, TAMANHO))
-				{
-					if(al_key_down(&estado, ALLEGRO_KEY_W))
-					{
-						personaje.posY += personaje.velocidad; 
-					}
-
-					if(al_key_down(&estado, ALLEGRO_KEY_S))
-					{
-						personaje.posY -= personaje.velocidad; 
-					}
-
-					if(al_key_down(&estado, ALLEGRO_KEY_D))
-					{
-						personaje.posX -= personaje.velocidad; 
-					}
-
-					if(al_key_down(&estado, ALLEGRO_KEY_A))
-					{
-						personaje.posX += personaje.velocidad; 
-					}
-
-					personaje.movimiento = false;
-				}
-				else 
-				{
-					personaje.movimiento = true;
-				}
 			}
-
 		}
 		printf("\n");
 	}
+}
+
+bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo)
+{
+	//Convertimos la posicion del jugador en indice del arreglo del mapa
+	int columna = jugadorPosXProximo / TAMANHO;
+	int fila = jugadorPosYProximo / TAMANHO;
+
+	//Validamos que no nos salimos del arreglo
+	if(fila >= 0 && fila < FILAS && columna >= 0 && columna < COLUMNAS)
+	{
+		if(mapa[fila][columna] == '#')
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
+{
+	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
 }
