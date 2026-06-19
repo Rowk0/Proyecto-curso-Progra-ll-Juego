@@ -13,7 +13,12 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//hacer un makefile para abrir el ejecutable de inmediato
+//Crear varios sprites, fondos. 
+//Cambiar paredes, según convenga con hitbox
+//Implementar camara
+//mono, quieto y se mueve la camara
+//Cargar más de una habitación
+//Implementar spawn jugador por mapa
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -28,58 +33,59 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 //flujo git (antes ctrl + s para guardar archivo local)
 //git add . -> git commit -m "cambios" -> git push.
 
-/////////////////////////////////////////////////////////////////  funciones
-
-void DibujarMapa(char mapa[FILAS][COLUMNAS]);
-void InicializarHabitaciones();
-char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
-bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
-
-//Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
-//Ultimo cuatro representa otro cuadrado con otros parametros
-//Compara si hay entre colicion entre ambos, y si hay devuelve true
-bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
-
-/////////////////////////////////////////////////////////////////////////////   estructuras
-
-typedef struct
-{
-	bool activa; //Las activas se muestran en pantalla
-	bool visitada; //Más adelante para hacer un minimapa
-	int tipo; //0 = normal, 1 = especial, 2 = jefe, por ejemplo. Cada tipo tendrá su habitacion propia
-} habitacion; 
-
-habitacion mazmorra[TAMANHO_MAPA][TAMANHO_MAPA];
+////////////////////////////////////////////////////////////////// Estructuras
 
 typedef struct 
 {
 	int posX;
 	int posY;
 	int velocidad;
-	bool movimiento;
 } jugador;
 
 jugador personaje;
+
+typedef struct 
+{
+	char sala1[FILAS][COLUMNAS];
+} mapa;
+
+mapa salas;
+
+//IMPORTANTE
+char sala[FILAS][COLUMNAS];
+
+/////////////////////////////////////////////////////////////////  funciones
+
+void DibujarMapa(char mapa[FILAS][COLUMNAS]);
+char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
+bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
+void Logica();
+void MovimientoJugador();
+
+//Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
+//Ultimo cuatro representa otro cuadrado con otros parametros
+//Compara si hay entre colicion entre ambos, y si hay devuelve true
+bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 //////////////////////////////////////////////////////////////////////////////////////////// main
 
 int main(int argc, char **argv)
 { 
+	//Inicializando mouse y jugador
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
+	personaje.posX = 500;
+	personaje.posY = 500;
+	personaje.velocidad = 7;
 
 	FILE *archivoMapas = NULL;
 	char *nombreHabitacion[LARGO_TEXTO];
 
-	nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
+	nombreHabitacion[LARGO_TEXTO] = "mapas.txt";  /*ver con Eloy!!!!!*/
 
-	char habitacion[FILAS][COLUMNAS];
-
-	cargarMapa(nombreHabitacion, archivoMapas, habitacion);
-
-	personaje.posX = 500;
-	personaje.posY = 500;
-	personaje.velocidad = 7;
-	personaje.movimiento = true;
+	cargarMapa(nombreHabitacion, archivoMapas, sala);
+/*	cargarMapa(nombreHabitacion, archivoMapas, sala,);*/
+	//Pasar por puntero o personaje.posX
+	//Para spawn personaje
 
 	//Inicializar dibujos
 	al_init_primitives_addon();
@@ -117,57 +123,16 @@ int main(int argc, char **argv)
 
 		posXMouse = estadoMouse.x;
 		posYMouse = estadoMouse.y;
-
-		int auxX = personaje.posX;
-		int auxY = personaje.posY;
-		int predict = 5;
 		
 		/////////////////////////////////////////////////////// funciones jugador
-		
+
+		//Apagar programa con ESC
 		if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
 		{
 			break;
 		}
 
-		if(al_key_down(&estado, ALLEGRO_KEY_W))
-		{
-			personaje.posY -= personaje.velocidad; 
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_S))
-		{
-			personaje.posY += personaje.velocidad; 
-		}
-
-		bool colisionY = ColisionMapa(habitacion, personaje.posX, personaje.posY) || 
-                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY) ||
-                          ColisionMapa(habitacion, personaje.posX, personaje.posY + TAMANHO - 1) ||
-                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1);
-
-		if (colisionY)
-		{
-			personaje.posY = auxY;
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_D))
-		{
-			personaje.posX += personaje.velocidad; 
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_A))
-		{
-			personaje.posX -= personaje.velocidad; 
-		}
-
-		bool colisionX = ColisionMapa(habitacion, personaje.posX, personaje.posY) || 
-                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY) ||
-                          ColisionMapa(habitacion, personaje.posX, personaje.posY + TAMANHO - 1) ||
-                          ColisionMapa(habitacion, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1);
-
-		if (colisionX)
-		{
-			personaje.posX = auxX;
-		}
+		Logica();
 		
 		//////////////////////////////////////////////////
 	
@@ -176,19 +141,19 @@ int main(int argc, char **argv)
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		DibujarMapa(habitacion);
+		DibujarMapa(sala);
 
 		//Jugador
-		al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
+		//al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
 
 		//Jugador
 		//al_draw_bitmap(spriteJugador, personaje.posX, personaje.posY, 0);
 
 		//Jugador
-		//al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
+		al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
 		
 		//Puntero del mouse
-		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
+		//al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
 
 		////////////////////////////////////////////////
         al_flip_display();
@@ -197,6 +162,56 @@ int main(int argc, char **argv)
 	}
 
 	return 0;
+}
+
+void Logica()
+{
+	MovimientoJugador();
+}
+
+void MovimientoJugador()
+{
+
+	//Guardamos la posicion del jugador en un axiliar
+	int auxX = personaje.posX;
+	int auxY = personaje.posY;
+
+	if(al_key_down(&estado, ALLEGRO_KEY_W))
+	{
+		personaje.posY -= personaje.velocidad; 
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_S))
+	{
+		personaje.posY += personaje.velocidad; 
+	}
+
+	//Luego de verificar la posY se comprueba si cada esquina del jugador está en colision con '#' en el arreglo del mapa
+	if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
+	ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
+	{
+		personaje.posY = auxY;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_D))
+	{
+		personaje.posX += personaje.velocidad; 
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_A))
+	{
+		personaje.posX -= personaje.velocidad; 
+	}
+
+	if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
+	ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
+	{
+		personaje.posX = auxX;
+	}
 }
 
 char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS])
@@ -213,30 +228,13 @@ char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILA
 		{
 			//fscanf ignora los espacios y saltos de lineas 
         	fscanf(archivoMapa, " %c", &mapa[i][j]);
+			/*if (mapa[i][j]=='@')
+			{
+			   
+			}*/
     	}
 	}
 	
-}
-
-void InicializarHabitaciones()
-{
-	for (int i = 0; i < TAMANHO_MAPA; i++)
-	{
-		for (int j = 0; j < TAMANHO_MAPA; j++)
-		{
-			mazmorra[i][j].activa = false;
-			mazmorra[i][j].visitada = false;
-			mazmorra[i][j].tipo = 0;
-		}
-	}
-
-	//Como el mapa es 9x9, la habitacion central es la 5,5
-	//Sala de spawn, por lo que se activa desde el inicio
-	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].activa = true;
-	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].visitada = true;
-	mazmorra[(TAMANHO_MAPA + 1) / 2][(TAMANHO_MAPA + 1) / 2].tipo = 0;
-
-	//Hacer un codigo donde busque caminos alrededor de la habitacion central y genere habitaciones segun la cantidad deseada
 }
 
 void DibujarMapa(char mapa[FILAS][COLUMNAS])
