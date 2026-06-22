@@ -56,7 +56,7 @@ char sala[FILAS][COLUMNAS];
 
 /////////////////////////////////////////////////////////////////  funciones
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS]);
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites);
 char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
@@ -109,6 +109,7 @@ int main(int argc, char **argv)
 
 	//Cargar imagenes
 	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
+	ALLEGRO_BITMAP *spriteSuelo = al_load_bitmap("Suelo.png");
 
 	//Si no hay nada en spriteJugador se devuelve
 	if(!spriteJugador)
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		DibujarMapa(sala);
+		DibujarMapa(sala, spriteSuelo);
 
 		//Jugador
 		//al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
@@ -171,7 +172,6 @@ void Logica()
 
 void MovimientoJugador()
 {
-
 	//Guardamos la posicion del jugador en un axiliar
 	int auxX = personaje.posX;
 	int auxY = personaje.posY;
@@ -237,17 +237,20 @@ char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILA
 	
 }
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS])
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites)
 {
-
 	for (int i = 0; i < FILAS; i++)
 	{
 		for (int j = 0; j < COLUMNAS; j++)
 		{
 			if (mapa[i][j] == '#')
 			{
-				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
+				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));	
+			}
 
+			if (mapa[i][j] == '.')
+			{
+				al_draw_bitmap(sprites, j * TAMANHO, i * TAMANHO, 0);
 			}
 		}
 		printf("\n");
