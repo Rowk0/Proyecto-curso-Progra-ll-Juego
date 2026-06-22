@@ -13,8 +13,7 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Crear varios sprites, fondos. 
-//Cambiar paredes, según convenga con hitbox
+//Ver con eloy 
 //Implementar camara
 //mono, quieto y se mueve la camara
 //Cargar más de una habitación
@@ -56,7 +55,7 @@ char sala[FILAS][COLUMNAS];
 
 /////////////////////////////////////////////////////////////////  funciones
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites);
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[30]);
 char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
@@ -110,6 +109,10 @@ int main(int argc, char **argv)
 	//Cargar imagenes
 	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
 	ALLEGRO_BITMAP *spriteSuelo = al_load_bitmap("Suelo.png");
+	ALLEGRO_BITMAP *sprites[30];
+
+	sprites[0] = al_load_bitmap("Suelo.png");
+	sprites[1] = al_load_bitmap("Pared.png");
 
 	//Si no hay nada en spriteJugador se devuelve
 	if(!spriteJugador)
@@ -142,19 +145,13 @@ int main(int argc, char **argv)
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		DibujarMapa(sala, spriteSuelo);
+		DibujarMapa(sala, sprites);
 
-		//Jugador
-		//al_draw_filled_rectangle(personaje.posX, personaje.posY, personaje.posX + 64, personaje.posY + 64, al_map_rgb(0, 255, 255));
-
-		//Jugador
-		//al_draw_bitmap(spriteJugador, personaje.posX, personaje.posY, 0);
-
-		//Jugador
+		//Jugador escalado
 		al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
 		
 		//Puntero del mouse
-		//al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
+		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
 
 		////////////////////////////////////////////////
         al_flip_display();
@@ -237,7 +234,7 @@ char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILA
 	
 }
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites)
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[30])
 {
 	for (int i = 0; i < FILAS; i++)
 	{
@@ -245,12 +242,14 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites)
 		{
 			if (mapa[i][j] == '#')
 			{
-				al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));	
+				//al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
+				
+				al_draw_bitmap(sprites[1], j * TAMANHO, i * TAMANHO, 0);
 			}
 
 			if (mapa[i][j] == '.')
 			{
-				al_draw_bitmap(sprites, j * TAMANHO, i * TAMANHO, 0);
+				al_draw_bitmap(sprites[0], j * TAMANHO, i * TAMANHO, 0);
 			}
 		}
 		printf("\n");
