@@ -23,6 +23,8 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 //Implementar animación
 //investigar sprites sheets en itch.io
 
+//Más interacciones (vida, dinero,, disparar)
+
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
 //gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image
@@ -78,6 +80,7 @@ int main(int argc, char **argv)
 
 	FILE *archivoMapas = NULL;
 	char nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
+	char nombreHabitacion2[LARGO_TEXTO] = "mapaTest2.txt";
 
 	//Crear ventana
     ALLEGRO_DISPLAY *ventana;
@@ -109,6 +112,11 @@ int main(int argc, char **argv)
 		}
 
 		Logica();
+
+		if (personaje.posX < 0)
+		{
+			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje);
+		}
 		
 		//////////////////////////////////////////////////
 	
@@ -220,6 +228,11 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRIT
 			}
 
 			if (mapa[i][j] == '.')
+			{
+				al_draw_bitmap(sprites[0], j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == '@')
 			{
 				al_draw_bitmap(sprites[0], j * TAMANHO, i * TAMANHO, 0);
 			}
