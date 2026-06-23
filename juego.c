@@ -20,8 +20,6 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 //Cargar más de una habitación
 
-//Mejorar main
-
 //Implementar animación
 //investigar sprites sheets en itch.io
 
@@ -60,9 +58,9 @@ bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugado
 void Logica();
 void MovimientoJugador();
 void InitAllegro();
-void InitGameComponents();
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES]);
 void InputHandle();
-void InitGame(jugador *personaje);
+void InitGame();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -73,27 +71,7 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 int main(int argc, char **argv)
 { 
-
-	/**
-
-	 * initGame();
-	 * 
-	 * initGameComponents()
-	 * {
-	 * 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
-		ALLEGRO_DISPLAY *ventana = al_create_display(640, 480);
-		if(!ventana) return -1;
-
-		//Cargar imagenes
-		ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
-		ALLEGRO_BITMAP *spriteSuelo = al_load_bitmap("Suelo.png");
-		ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
-
-		sprites[0] = al_load_bitmap("Suelo.png");
-		sprites[1] = al_load_bitmap("Pared.png");
-	 * 
-	 * }
-	 */
+	/////////////////////////////////////////////////////////////// Declaraciones
 	//Inicializando mouse y jugador
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
 	personaje.velocidad = 7;
@@ -101,32 +79,23 @@ int main(int argc, char **argv)
 	FILE *archivoMapas = NULL;
 	char nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
 
-	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
-/*	cargarMapa(nombreHabitacion, archivoMapas, sala,);*/
-	//Pasar por puntero o personaje.posX
-	//Para spawn personaje
-
-	InitAllegro();
-
-	InitGameComponents();
-
 	//Crear ventana
-	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
-    ALLEGRO_DISPLAY *ventana = al_create_display(640, 480);
-    if(!ventana) return -1;
+    ALLEGRO_DISPLAY *ventana;
 
-	//Cargar imagenes
+	//Arreglo de sprites
 	ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
 
-	sprites[0] = al_load_bitmap("Suelo.png");
-	sprites[1] = al_load_bitmap("Pared.png");
-	sprites[2] = al_load_bitmap("Cesar.png");
+	///////////////////////////////////////////////////////////////
+
+	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
+
+	InitAllegro();
+	
+	InitGameComponents(ventana, sprites);
 
 	while (1)
 	{
-		//Funcion input() o inputHandle()
-		al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
-		al_get_mouse_state(&estadoMouse);
+		InputHandle();
 
 		posXMouse = estadoMouse.x;
 		posYMouse = estadoMouse.y;
@@ -300,12 +269,20 @@ void InitAllegro()
 	if(!al_install_mouse()) printf("ERROR MOUSE");
 }
 
-void InitGameComponents()
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES])
 {
-	
+	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
+	ventana = al_create_display(640, 480);
+	if(!ventana) return -1;
+
+	//Cargar imagenes
+	sprites[0] = al_load_bitmap("Suelo.png");
+	sprites[1] = al_load_bitmap("Pared.png");
+	sprites[2] = al_load_bitmap("Cesar.png");
 }
 
 void InputHandle()
 {
-
+	al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
+	al_get_mouse_state(&estadoMouse);
 }
