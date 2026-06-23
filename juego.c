@@ -5,19 +5,25 @@
 #define FILAS 17
 #define COLUMNAS 30
 #define TAMANHO 64
-#define TAMANHO_MAPA 9
 #define LARGO_TEXTO 30
+#define LARGO_SPRITES 30
 
 ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
 ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Ver con eloy 
+
 //Implementar camara
 //mono, quieto y se mueve la camara
-//Cargar más de una habitación
 //Implementar spawn jugador por mapa
+
+//Cargar más de una habitación
+
+//Mejorar main
+
+//Implementar animación
+//investigar sprites sheets en itch.io
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -43,23 +49,20 @@ typedef struct
 
 jugador personaje;
 
-typedef struct 
-{
-	char sala1[FILAS][COLUMNAS];
-} mapa;
-
-mapa salas;
-
 //IMPORTANTE
 char sala[FILAS][COLUMNAS];
 
 /////////////////////////////////////////////////////////////////  funciones
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[30]);
-char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS]);
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES]);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje);
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
 void MovimientoJugador();
+void InitAllegro();
+void InitGameComponents();
+void InputHandle();
+void InitGame(jugador *personaje);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -70,36 +73,42 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 int main(int argc, char **argv)
 { 
+
+	/**
+
+	 * initGame();
+	 * 
+	 * initGameComponents()
+	 * {
+	 * 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
+		ALLEGRO_DISPLAY *ventana = al_create_display(640, 480);
+		if(!ventana) return -1;
+
+		//Cargar imagenes
+		ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
+		ALLEGRO_BITMAP *spriteSuelo = al_load_bitmap("Suelo.png");
+		ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
+
+		sprites[0] = al_load_bitmap("Suelo.png");
+		sprites[1] = al_load_bitmap("Pared.png");
+	 * 
+	 * }
+	 */
 	//Inicializando mouse y jugador
 	int posXMouse = 0, posYMouse = 0, tamaño = 7;
-	personaje.posX = 500;
-	personaje.posY = 500;
 	personaje.velocidad = 7;
 
 	FILE *archivoMapas = NULL;
-	char *nombreHabitacion[LARGO_TEXTO];
+	char nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
 
-	nombreHabitacion[LARGO_TEXTO] = "mapas.txt";  /*ver con Eloy!!!!!*/
-
-	cargarMapa(nombreHabitacion, archivoMapas, sala);
+	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
 /*	cargarMapa(nombreHabitacion, archivoMapas, sala,);*/
 	//Pasar por puntero o personaje.posX
 	//Para spawn personaje
 
-	//Inicializar dibujos
-	al_init_primitives_addon();
+	InitAllegro();
 
-	//Inicializar imagenes
-	al_init_image_addon();
-
-	//Inicializar Allegro
-	if(!al_init()) return -1;
-
-	//Inicializar teclado
-	if(!al_install_keyboard()) return -1;
-
-	//Inicializar mouse
-	if(!al_install_mouse()) return -1;
+	InitGameComponents();
 
 	//Crear ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
@@ -107,21 +116,15 @@ int main(int argc, char **argv)
     if(!ventana) return -1;
 
 	//Cargar imagenes
-	ALLEGRO_BITMAP *spriteJugador = al_load_bitmap("Cesar.png");
-	ALLEGRO_BITMAP *spriteSuelo = al_load_bitmap("Suelo.png");
-	ALLEGRO_BITMAP *sprites[30];
+	ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
 
 	sprites[0] = al_load_bitmap("Suelo.png");
 	sprites[1] = al_load_bitmap("Pared.png");
-
-	//Si no hay nada en spriteJugador se devuelve
-	if(!spriteJugador)
-	{
-		return -1;
-	}
+	sprites[2] = al_load_bitmap("Cesar.png");
 
 	while (1)
 	{
+		//Funcion input() o inputHandle()
 		al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
 		al_get_mouse_state(&estadoMouse);
 
@@ -148,7 +151,7 @@ int main(int argc, char **argv)
 		DibujarMapa(sala, sprites);
 
 		//Jugador escalado
-		al_draw_scaled_bitmap(spriteJugador, 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
+		al_draw_scaled_bitmap(sprites[2], 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
 		
 		//Puntero del mouse
 		al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
@@ -211,10 +214,10 @@ void MovimientoJugador()
 	}
 }
 
-char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS])
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS], jugador *personaje)
 {
 
-	if ((archivoMapa = fopen(nombreMapa[LARGO_TEXTO],"r")) == NULL)
+	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
 	{
 		return 0;
 	} 
@@ -225,16 +228,18 @@ char cargarMapa(char *nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILA
 		{
 			//fscanf ignora los espacios y saltos de lineas 
         	fscanf(archivoMapa, " %c", &mapa[i][j]);
-			/*if (mapa[i][j]=='@')
+
+			if (mapa[i][j]=='@')
 			{
-			   
-			}*/
+				personaje->posX = j * TAMANHO;
+				personaje->posY = i * TAMANHO;
+			}
     	}
 	}
 	
 }
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[30])
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES])
 {
 	for (int i = 0; i < FILAS; i++)
 	{
@@ -242,8 +247,6 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[30])
 		{
 			if (mapa[i][j] == '#')
 			{
-				//al_draw_filled_rectangle(j * TAMANHO, i * TAMANHO, j * TAMANHO + TAMANHO, i * TAMANHO + TAMANHO, al_map_rgb(245, 73, 39));
-				
 				al_draw_bitmap(sprites[1], j * TAMANHO, i * TAMANHO, 0);
 			}
 
@@ -277,4 +280,32 @@ bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugado
 bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 {
 	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
+}
+
+void InitAllegro()
+{
+	//Inicializar dibujos
+	al_init_primitives_addon();
+
+	//Inicializar imagenes
+	al_init_image_addon();
+
+	//Inicializar Allegro
+	if(!al_init()) printf("ERROR ALLEGRO");
+
+	//Inicializar teclado
+	if(!al_install_keyboard()) printf("ERROR TECLADO");
+
+	//Inicializar mouse
+	if(!al_install_mouse()) printf("ERROR MOUSE");
+}
+
+void InitGameComponents()
+{
+	
+}
+
+void InputHandle()
+{
+
 }
