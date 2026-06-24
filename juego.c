@@ -18,7 +18,7 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 //mono, quieto y se mueve la camara
 //Implementar spawn jugador por mapa
 
-//Cargar más de una habitación
+//Mejorar Cambios de habitacion
 
 //Implementar animación
 //investigar sprites sheets en itch.io
@@ -62,7 +62,7 @@ void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES]);
 void InputHandle();
-void InitGame();
+void ActualizacionCamara(float posicionCamaraX);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -88,6 +88,8 @@ int main(int argc, char **argv)
 	//Arreglo de sprites
 	ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
 
+	//Declaración camara
+	ALLEGRO_TRANSFORM camara;
 	///////////////////////////////////////////////////////////////
 
 	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
@@ -117,9 +119,18 @@ int main(int argc, char **argv)
 		{
 			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje);
 		}
+
+		//Poner en objetivo el objeto a mover
+		al_identity_transform(&camara);
+
+		//Hacer los movimientos
+		al_translate_transform(&camara, -personaje.posX + 500, -personaje.posY + 500);
+
+		//Usar los movimientos
+		al_use_transform(&camara);
 		
-		//////////////////////////////////////////////////
-	
+		////////////////////////////////////////////////// axis del mouse
+		
 		al_get_mouse_num_axes();
 
 		al_clear_to_color(al_map_rgb(0, 0, 0));
