@@ -7,9 +7,8 @@
 #define TAMANHO 64
 #define LARGO_TEXTO 30
 #define LARGO_SPRITES 30
-
-ALLEGRO_KEYBOARD_STATE estado; //Estructura donde se guarda el estado del teclado
-ALLEGRO_MOUSE_STATE estadoMouse;
+#define LARGO_PANTALLA 1920
+#define ANCHO_PANTALLA 1088
 
 ////////////////////////////////////////////////////////////////  tareas
 
@@ -56,13 +55,18 @@ typedef struct
 mouse_ mouse;
 
 ///////////////////////////////////////////////////////////////// Variables globales
-//En este arreglo se carga el mapa en base a el se dibuja
+
+//Estructura donde se guarda el estado del teclado y del mouse
+ALLEGRO_KEYBOARD_STATE estado; 
+ALLEGRO_MOUSE_STATE estadoMouse;
+
+//En este arreglo se carga el mapa, y en base a él, se dibuja
 char sala[FILAS][COLUMNAS];
 
 //Cuando JUEGO = 0, el while termina y se cierra el programa
 int JUEGO = 1;
 
-/////////////////////////////////////////////////////////////////  funciones
+/////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje);
@@ -85,6 +89,7 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 int main(int argc, char **argv)
 { 
 	/////////////////////////////////////////////////////////////// Declaraciones
+
 	//Inicializando jugador
 	personaje.velocidad = 7;
 
@@ -143,7 +148,23 @@ void Logica()
 	al_identity_transform(&camara);
 
 	//Hacer los movimientos
-	al_translate_transform(&camara, -personaje.posX + 800, -personaje.posY + 500);
+	if (personaje.posX < LARGO_PANTALLA * 0.25)
+	{
+		al_translate_transform(&camara, LARGO_PANTALLA * 0.25 - personaje.posX, 0);
+	}
+	else if (personaje.posX > LARGO_PANTALLA * 0.75)
+	{
+		al_translate_transform(&camara, LARGO_PANTALLA * 0.75 - personaje.posX, 0);
+	}
+	else if (personaje.posY > ANCHO_PANTALLA * 0.75)
+	{
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.75 - personaje.posY);
+	}
+	else if (personaje.posY < ANCHO_PANTALLA * 0.25)
+	{
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.25 - personaje.posY);
+	}
+
 
 	//Usar los movimientos
 	al_use_transform(&camara);
@@ -151,7 +172,6 @@ void Logica()
 	//Axis del mouse
 	al_get_mouse_num_axes();
 
-	
 }
 
 void MovimientoJugador()
@@ -231,7 +251,8 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRIT
 		{
 			if (mapa[i][j] == '#')
 			{
-				al_draw_bitmap(sprites[1], j * TAMANHO, i * TAMANHO, 0);
+				//al_draw_bitmap(sprites[1], j * TAMANHO, i * TAMANHO, 0);
+				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
 			if (mapa[i][j] == '.')
