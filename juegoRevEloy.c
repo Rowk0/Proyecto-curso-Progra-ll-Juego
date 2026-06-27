@@ -13,8 +13,6 @@ ALLEGRO_MOUSE_STATE estadoMouse;
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Terminar Camara
-
 //Mejorar Cambios de habitacion
 
 //Implementar animación
@@ -46,21 +44,8 @@ typedef struct
 
 jugador personaje;
 
-typedef struct 
-{
-	int posX;
-	int posY;
-	int tamanho;
-} mouse_;
-
-mouse_ mouse;
-
-///////////////////////////////////////////////////////////////// Variables globales
-//En este arreglo se carga el mapa en base a el se dibuja
+//IMPORTANTE
 char sala[FILAS][COLUMNAS];
-
-//Cuando JUEGO = 0, el while termina y se cierra el programa
-int JUEGO = 1;
 
 /////////////////////////////////////////////////////////////////  funciones
 
@@ -70,22 +55,22 @@ bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugado
 void Logica();
 void MovimientoJugador();
 void InitAllegro();
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], mouse_ *mouse);
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
 void InputHandle();
 void ActualizacionCamara(float posicionCamaraX);
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
-bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
+bool Colision(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 //////////////////////////////////////////////////////////////////////////////////////////// main
 
 int main(int argc, char **argv)
 { 
 	/////////////////////////////////////////////////////////////// Declaraciones
-	//Inicializando jugador
+	//Inicializando mouse y jugador
+	int posXMouse = 0, posYMouse = 0, tamaño = 7;
 	personaje.velocidad = 7;
 
 	FILE *archivoMapas = NULL;
@@ -99,33 +84,76 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
 
 	ALLEGRO_BITMAP *spriteSheet;
-	
+
+	//Declaración camara
+	ALLEGRO_TRANSFORM camara;
 	///////////////////////////////////////////////////////////////
 
 	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
 
 	InitAllegro();
 	
-	InitGameComponents(ventana, sprites, &mouse);
+	InitGameComponents(ventana, sprites, spriteSheet);
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
+	int JUEGO = 1;
 	while (JUEGO)
 	{
-		//Funcion que actualiza el estado del teclado y mouse
 		InputHandle();
 
-		//Logica del juego. Ej: movimientos del juegador
+		posXMouse = estadoMouse.x; //inputHandle()
+		posYMouse = estadoMouse.y; //inputhandle()
+		
+		/////////////////////////////////////////////////////// funciones jugador
+
+		//Apagar programa con ESC
+		if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) //InputHandle
+		{
+			JUEGO = 0;
+		}
+
 		Logica();
 
-		//Cuando funcione correctamente lo pondré en logica
-		if (personaje.posX < 0) 
+		if (personaje.posX < 0) //Logica
 		{
 			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje);
 		}
 
-		//Dibujar aqui
-		Render(sala, sprites, spriteSheet);
+		// ========== DESDE AQUI ==========
+		//Poner en objetivo el objeto a mover
+		al_identity_transform(&camara);
+
+		//Hacer los movimientos
+		al_translate_transform(&camara, -personaje.posX + 800, -personaje.posY + 500);
+
+		//Usar los movimientos
+		al_use_transform(&camara);
+		
+		////////////////////////////////////////////////// axis del mouse
+		
+		al_get_mouse_num_axes();
+		// ========== HASTA AQUI -> en Logica() ==========
+
+		// ========== DESDE AQUI ==========
+		al_clear_to_color(al_map_rgb(0, 0, 0));
+		//////////////////////////////////////////////// Dibujar en este espacio
+
+		DibujarMapa(sala, sprites, spriteSheet);
+
+		//Jugador escalado
+		//al_draw_scaled_bitmap(sprites[2], 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
+
+		//Jugador de SpriteSheet
+		al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);
+
+		//Puntero del mouse
+		//al_draw_filled_rectangle(posXMouse - (tamaño / 2), posYMouse - (tamaño / 2), posXMouse + (tamaño / 2), posYMouse + (tamaño / 2), al_map_rgb(0, 255, 255));
+
+		////////////////////////////////////////////////
+        al_flip_display();
+
+		// ========== HASTA AQUI -> en render() ==========
 
 		al_rest(0.016); //Hacer descansar el cpu
 	}
@@ -135,23 +163,7 @@ int main(int argc, char **argv)
 
 void Logica()
 {
-	ALLEGRO_TRANSFORM camara;
-
 	MovimientoJugador();
-
-	//Poner en objetivo el objeto a mover
-	al_identity_transform(&camara);
-
-	//Hacer los movimientos
-	al_translate_transform(&camara, -personaje.posX + 800, -personaje.posY + 500);
-
-	//Usar los movimientos
-	al_use_transform(&camara);
-	
-	//Axis del mouse
-	al_get_mouse_num_axes();
-
-	
 }
 
 void MovimientoJugador()
@@ -250,26 +262,6 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRIT
 	}
 }
 
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet)
-{
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	//////////////////////////////////////////////// Dibujar en este espacio
-
-	DibujarMapa(mapa, sprites, spriteSheet);
-
-	//Jugador escalado
-	//al_draw_scaled_bitmap(sprites[2], 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
-
-	//Jugador de SpriteSheet
-	al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);
-
-	//Puntero del mouse
-	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
-
-	////////////////////////////////////////////////
-	al_flip_display();
-}
-
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo)
 {
 	//Convertimos la posicion del jugador en indice del arreglo del mapa
@@ -288,7 +280,7 @@ bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugado
 	return false;
 }
 
-bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
+bool Colision(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 {
 	return ( (x1 < x2 + w2) && (x2 < x1 + w1) && (y1 < y2 + h2) && (y2 < y1 + h1));
 }
@@ -311,35 +303,21 @@ void InitAllegro()
 	if(!al_install_mouse()) printf("ERROR MOUSE");
 }
 
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], mouse_ *mouse)
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet)
 {
-	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
-	if(!ventana) return -1;
+	if(!ventana) 
+		return -1;
 
 	//Cargar imagenes
 	sprites[0] = al_load_bitmap("Suelo.png");
 	sprites[1] = al_load_bitmap("Pared.png");
 	sprites[2] = al_load_bitmap("Cesar.png");
-
-	//Inicializando Mouse
-	mouse->posX = 0;
-	mouse->posY = 0;
-	mouse->tamanho = 7;
 }
 
 void InputHandle()
 {
 	al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
 	al_get_mouse_state(&estadoMouse);
-
-	mouse.posX = estadoMouse.x;
-	mouse.posY = estadoMouse.y;
-
-	//Apagar programa con ESC
-	if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
-	{
-		JUEGO = 0;
-	}
 }
