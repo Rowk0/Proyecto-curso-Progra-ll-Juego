@@ -16,8 +16,6 @@
 
 //Mejorar Cambios de habitacion
 
-//Implementar animación
-
 //Más interacciones (vida, dinero, disparar)
 //Hacer una especie de HUD
 
@@ -55,6 +53,16 @@ typedef struct
 
 mouse_ mouse;
 
+typedef	struct 
+{
+	int posX;
+	int posY;
+	int velocidad;
+	int activa;
+} bala_;
+
+bala_ bala;
+
 ///////////////////////////////////////////////////////////////// Variables globales
 
 //Estructura donde se guarda el estado del teclado y del mouse
@@ -81,6 +89,7 @@ void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], mouse_ *mouse);
 void InputHandle();
 void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
+void Disparo();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -93,8 +102,13 @@ int main(int argc, char **argv)
 { 
 	/////////////////////////////////////////////////////////////// Declaraciones
 
+	bala.posX = 0;
+	bala.posY = 0;
+	bala.velocidad = 10;
+	bala.activa = 0;
+
 	//Inicializando jugador
-	personaje.velocidad = 7;
+	personaje.velocidad = 5;
 	personaje.movimientoJugador = 1;
 
 	FILE *archivoMapas = NULL;
@@ -146,6 +160,8 @@ void Logica()
 {
 	MovimientoJugador();
 
+	Disparo();
+
 	ALLEGRO_TRANSFORM camara;
 
 	//Poner en objetivo el objeto a mover
@@ -166,11 +182,11 @@ void Logica()
 	}
 	
 	//Movimiento pantalla en eje y
-	if (personaje.posY > ANCHO_PANTALLA * 0.75)
+	if (personaje.posY > ANCHO_PANTALLA * 0.75) //Arriba
 	{
 		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.75 - personaje.posY);
 	}
-	else if (personaje.posY < ANCHO_PANTALLA * 0.25)
+	else if (personaje.posY < ANCHO_PANTALLA * 0.25) //Abajo
 	{
 		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.25 - personaje.posY);
 	}
@@ -181,6 +197,23 @@ void Logica()
 	//Axis del mouse
 	al_get_mouse_num_axes();
 
+}
+
+void Disparo()
+{
+	
+
+	if(al_mouse_button_down (&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+	{
+		bala.posX = personaje.posX + (TAMANHO/2);
+		bala.posY = personaje.posY + (TAMANHO/2);
+		bala.activa = 1;
+	}
+
+	if(bala.activa != 0)
+	{
+		bala.posX += bala.velocidad;
+	}
 }
 
 void MovimientoJugador()
@@ -317,6 +350,11 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], 
 	if(controlSprites > 40)
 	{
 		controlSprites = 0;
+	}
+
+	if (bala.activa != 0)
+	{
+		al_draw_filled_circle(bala.posX, bala.posY, 8, al_map_rgb(0, 255, 255));
 	}
 	
 	//Puntero del mouse
