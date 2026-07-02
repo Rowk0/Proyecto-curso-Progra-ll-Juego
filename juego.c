@@ -10,6 +10,7 @@
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
 #define MAX_BALAS 20
+#define MAX_ENEMIGOS 20
 
 ////////////////////////////////////////////////////////////////  tareas
 
@@ -79,6 +80,18 @@ int balaActual = 0;
 //cadencia de disparo
 int cadencia = 0;
 
+typedef struct 
+{
+	int posX;
+	int posY;
+	int velocidad;
+	int activa;
+} enemigo;
+ 
+enemigo slime[MAX_ENEMIGOS];
+
+int slimeActual = 0;
+
 ///////////////////////////////////////////////////////////////// Variables globales
 
 //Estructura donde se guarda el estado del teclado y del mouse
@@ -97,7 +110,7 @@ int controlSprites = 0;
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS]);
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
 void MovimientoJugador();
@@ -130,11 +143,11 @@ int main(int argc, char **argv)
 	
 	///////////////////////////////////////////////////////////////
 
-	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje);
-
 	InitAllegro();
 	
 	InitGameComponents(ventana, &mouse);
+
+	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime);
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
@@ -149,7 +162,7 @@ int main(int argc, char **argv)
 		//Cuando funcione correctamente lo pondré en logica
 		if (personaje.posX < 0) 
 		{
-			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje);
+			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje, slime);
 		}
 
 		//Dibujar aqui
@@ -171,7 +184,6 @@ void Logica()
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
-
 }
 
 void Disparo()
@@ -231,6 +243,7 @@ void Disparo()
 		cadencia = 0;
 	}
 
+	//Aumenta constantemente bala[i].posY/bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 		if (bala[i].dirBala.arriba != 0)
@@ -254,6 +267,7 @@ void Disparo()
 		}
 	}
 
+	//Cuando el arreglo este a punto de terminar, se reinicia
 	if (balaActual > MAX_BALAS - 1)
 	{
 		balaActual = 0;
@@ -308,7 +322,7 @@ void MovimientoJugador()
 	
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS], jugador *personaje)
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
 {
 
 	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
@@ -323,11 +337,27 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//fscanf ignora los espacios y saltos de lineas 
         	fscanf(archivoMapa, " %c", &mapa[i][j]);
 
+			//Ubicar posicion personaje
 			if (mapa[i][j]=='@')
 			{
 				personaje->posX = j * TAMANHO;
 				personaje->posY = i * TAMANHO;
 			}
+
+			//ubicar posicion enemigo
+			if (mapa[i][j]=='s')
+			{
+				enemigo[slimeActual].posX = j * TAMANHO;
+				enemigo[slimeActual].posY = i * TAMANHO;
+				enemigo[slimeActual].activa = 1;
+				slimeActual ++;
+			}
+
+			if (slimeActual > MAX_ENEMIGOS - 1)
+			{
+				slimeActual = 0;
+			}
+			
     	}
 	}
 }
@@ -392,11 +422,21 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 		controlSprites = 0;
 	}
 
+	//Dibujo de balas
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 		if (bala[i].activa != 0)
 		{
 			al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
+		}
+	}
+	
+	//Dibujo enemigos
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (slime[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
 		}
 	}
 	
@@ -462,8 +502,17 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	mouse->tamanho = 7;
 
 	//Inicializando jugador
-	personaje.velocidad = 5;
+	personaje.velocidad = 7;
 	personaje.movimientoJugador = 1;
+
+	//Inicializando enemigos
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		slime[i].posX = 0;
+		slime[i].posY = 0;
+		slime[i].velocidad = 5;
+		slime[i].activa = 0;
+	}
 
 	//Inicializando balas
 	for (int i = 0; i < MAX_BALAS; i++)
