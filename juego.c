@@ -54,18 +54,27 @@ typedef struct
 
 mouse_ mouse;
 
+struct dirBala_
+{
+	int derecha;
+	int izquierda;
+	int abajo;
+	int arriba;
+};
+
 typedef	struct 
 {
 	int posX;
 	int posY;
 	int velocidad;
-	int activa;
+	int activa; 
+	struct dirBala_ dirBala;
 } bala_;
 
 bala_ bala[MAX_BALAS];
 
 //Control de balas
-int contadorBalas = 0;
+int balaActual = 0;
 
 //cadencia de disparo
 int cadencia = 0;
@@ -172,21 +181,82 @@ void Disparo()
 
 	if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
 	{	
-		bala[contadorBalas].posX = personaje.posX + (TAMANHO/2);
-		bala[contadorBalas].posY = personaje.posY + (TAMANHO/2);
-		bala[contadorBalas].activa = 1;
-		contadorBalas++;
+		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		bala[balaActual].activa = 1;
+		bala[balaActual].dirBala.arriba = 1;
+		bala[balaActual].dirBala.abajo = 0;
+		bala[balaActual].dirBala.derecha = 0;
+		bala[balaActual].dirBala.izquierda= 0;
+		balaActual++;
+		cadencia = 0;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_DOWN) && cadencia > 20)
+	{	
+		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		bala[balaActual].activa = 1;
+		bala[balaActual].dirBala.arriba = 0;
+		bala[balaActual].dirBala.abajo = 1;
+		bala[balaActual].dirBala.derecha = 0;
+		bala[balaActual].dirBala.izquierda= 0;
+		balaActual++;
+		cadencia = 0;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_RIGHT) && cadencia > 20)
+	{	
+		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		bala[balaActual].activa = 1;
+		bala[balaActual].dirBala.arriba = 0;
+		bala[balaActual].dirBala.abajo = 0;
+		bala[balaActual].dirBala.derecha = 1;
+		bala[balaActual].dirBala.izquierda= 0;
+		balaActual++;
+		cadencia = 0;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_LEFT) && cadencia > 20)
+	{	
+		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		bala[balaActual].activa = 1;
+		bala[balaActual].dirBala.arriba = 0;
+		bala[balaActual].dirBala.abajo = 0;
+		bala[balaActual].dirBala.derecha = 0;
+		bala[balaActual].dirBala.izquierda= 1;
+		balaActual++;
 		cadencia = 0;
 	}
 
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		bala[i].posY -= bala[i].velocidad;
+		if (bala[i].dirBala.arriba != 0)
+		{
+			bala[i].posY -= bala[i].velocidad;
+		}
+
+		if (bala[i].dirBala.abajo != 0)
+		{
+			bala[i].posY += bala[i].velocidad;
+		}
+
+		if (bala[i].dirBala.derecha != 0)
+		{
+			bala[i].posX += bala[i].velocidad;
+		}
+
+		if (bala[i].dirBala.izquierda != 0)
+		{
+			bala[i].posX -= bala[i].velocidad;
+		}
 	}
 
-	if (contadorBalas > MAX_BALAS - 1)
+	if (balaActual > MAX_BALAS - 1)
 	{
-		contadorBalas = 0;
+		balaActual = 0;
 	}
 }
 
@@ -402,6 +472,10 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		bala[i].posY = 0;
 		bala[i].velocidad = 10;
 		bala[i].activa = 0;
+		bala[i].dirBala.abajo = 0;
+		bala[i].dirBala.arriba = 0;
+		bala[i].dirBala.derecha = 0;
+		bala[i].dirBala.izquierda = 0;
 	}
 }
 
