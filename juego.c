@@ -9,6 +9,7 @@
 #define LARGO_SPRITES 30
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
+#define MAX_BALAS 20
 
 ////////////////////////////////////////////////////////////////  tareas
 
@@ -61,7 +62,13 @@ typedef	struct
 	int activa;
 } bala_;
 
-bala_ bala;
+bala_ bala[MAX_BALAS];
+
+//Control de balas
+int contadorBalas = 0;
+
+//cadencia de disparo
+int cadencia = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -80,16 +87,17 @@ int controlSprites = 0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje);
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
 void MovimientoJugador();
 void InitAllegro();
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], mouse_ *mouse);
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
 void InputHandle();
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet);
+void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
 void Disparo();
+void MovimientoCamara();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -100,17 +108,7 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
 int main(int argc, char **argv)
 { 
-	/////////////////////////////////////////////////////////////// Declaraciones
-
-	bala.posX = 0;
-	bala.posY = 0;
-	bala.velocidad = 10;
-	bala.activa = 0;
-
-	//Inicializando jugador
-	personaje.velocidad = 5;
-	personaje.movimientoJugador = 1;
-
+	/////////////////////////////////////////////////////////////// Declaraciones de una vez
 	FILE *archivoMapas = NULL;
 	char nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
 	char nombreHabitacion2[LARGO_TEXTO] = "mapaTest2.txt";
@@ -118,9 +116,7 @@ int main(int argc, char **argv)
 	//Crear ventana
     ALLEGRO_DISPLAY *ventana;
 
-	//Arreglo de sprites
-	ALLEGRO_BITMAP *sprites[LARGO_SPRITES];
-
+	//Sprites
 	ALLEGRO_BITMAP *spriteSheet;
 	
 	///////////////////////////////////////////////////////////////
@@ -129,7 +125,7 @@ int main(int argc, char **argv)
 
 	InitAllegro();
 	
-	InitGameComponents(ventana, sprites, &mouse);
+	InitGameComponents(ventana, &mouse);
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
@@ -148,7 +144,7 @@ int main(int argc, char **argv)
 		}
 
 		//Dibujar aqui
-		Render(sala, sprites, spriteSheet);
+		Render(sala, spriteSheet);
 
 		al_rest(0.016); //Hacer descansar el cpu
 	}
@@ -162,37 +158,7 @@ void Logica()
 
 	Disparo();
 
-	ALLEGRO_TRANSFORM camara;
-
-	//Poner en objetivo el objeto a mover
-	al_identity_transform(&camara);
-
-	//Hacer los movimientos
-	//Movimiento pantalla en eje x
-	int camaraLimiteX = 1920;
-	int camaraLimiteY = 1088;
-
-	if (personaje.posX < camaraLimiteX * 0.25) //Izquierda
-	{
-		al_translate_transform(&camara, camaraLimiteX * 0.25 - personaje.posX, 0);
-	}
-	else if (personaje.posX > camaraLimiteX * 0.75) //Derecha
-	{
-		al_translate_transform(&camara, camaraLimiteX * 0.75 - personaje.posX, 0);
-	}
-	
-	//Movimiento pantalla en eje y
-	if (personaje.posY > ANCHO_PANTALLA * 0.75) //Arriba
-	{
-		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.75 - personaje.posY);
-	}
-	else if (personaje.posY < ANCHO_PANTALLA * 0.25) //Abajo
-	{
-		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.25 - personaje.posY);
-	}
-
-	//Usar los movimientos
-	al_use_transform(&camara);
+	MovimientoCamara();
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -201,18 +167,26 @@ void Logica()
 
 void Disparo()
 {
-	
+	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
+	cadencia++;
 
-	if(al_mouse_button_down (&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
-	{
-		bala.posX = personaje.posX + (TAMANHO/2);
-		bala.posY = personaje.posY + (TAMANHO/2);
-		bala.activa = 1;
+	if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
+	{	
+		bala[contadorBalas].posX = personaje.posX + (TAMANHO/2);
+		bala[contadorBalas].posY = personaje.posY + (TAMANHO/2);
+		bala[contadorBalas].activa = 1;
+		contadorBalas++;
+		cadencia = 0;
 	}
 
-	if(bala.activa != 0)
+	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		bala.posX += bala.velocidad;
+		bala[i].posY -= bala[i].velocidad;
+	}
+
+	if (contadorBalas > MAX_BALAS - 1)
+	{
+		contadorBalas = 0;
 	}
 }
 
@@ -286,10 +260,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			}
     	}
 	}
-	
 }
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet)
+void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 {
 	for (int i = 0; i < FILAS; i++)
 	{
@@ -297,19 +270,16 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRIT
 		{
 			if (mapa[i][j] == '#')
 			{
-				//al_draw_bitmap(sprites[1], j * TAMANHO, i * TAMANHO, 0);
 				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
 			if (mapa[i][j] == '.')
 			{
-				//al_draw_bitmap(sprites[0], j * TAMANHO, i * TAMANHO, 0);
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
 			if (mapa[i][j] == '@')
 			{
-				//al_draw_bitmap(sprites[0], j * TAMANHO, i * TAMANHO, 0);
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 		}
@@ -317,13 +287,13 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRIT
 	}
 }
 
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], ALLEGRO_BITMAP *spriteSheet)
+void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 {
 
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 
-	DibujarMapa(mapa, sprites, spriteSheet);
+	DibujarMapa(mapa, spriteSheet);
 
 	//Jugador escalado
 	//al_draw_scaled_bitmap(sprites[2], 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
@@ -352,10 +322,14 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *sprites[LARGO_SPRITES], 
 		controlSprites = 0;
 	}
 
-	if (bala.activa != 0)
+	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		al_draw_filled_circle(bala.posX, bala.posY, 8, al_map_rgb(0, 255, 255));
+		if (bala[i].activa != 0)
+		{
+			al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
+		}
 	}
+	
 	
 	//Puntero del mouse
 	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
@@ -405,22 +379,30 @@ void InitAllegro()
 	if(!al_install_mouse()) printf("ERROR MOUSE");
 }
 
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, ALLEGRO_BITMAP *sprites[LARGO_SPRITES], mouse_ *mouse)
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
 	if(!ventana) return -1;
 
-	//Cargar imagenes
-	sprites[0] = al_load_bitmap("Suelo.png");
-	sprites[1] = al_load_bitmap("Pared.png");
-	sprites[2] = al_load_bitmap("Cesar.png");
-
 	//Inicializando Mouse
 	mouse->posX = 0;
 	mouse->posY = 0;
 	mouse->tamanho = 7;
+
+	//Inicializando jugador
+	personaje.velocidad = 5;
+	personaje.movimientoJugador = 1;
+
+	//Inicializando balas
+	for (int i = 0; i < MAX_BALAS; i++)
+	{
+		bala[i].posX = 0;
+		bala[i].posY = 0;
+		bala[i].velocidad = 10;
+		bala[i].activa = 0;
+	}
 }
 
 void InputHandle()
@@ -436,4 +418,39 @@ void InputHandle()
 	{
 		JUEGO = 0;
 	}
+}
+
+void MovimientoCamara()
+{
+	ALLEGRO_TRANSFORM camara;
+
+	//Poner en objetivo el objeto a mover
+	al_identity_transform(&camara);
+
+	//Hacer los movimientos
+	//Movimiento pantalla en eje x
+	int camaraLimiteX = 1920;
+	int camaraLimiteY = 1088;
+
+	if (personaje.posX < camaraLimiteX * 0.25) //Izquierda
+	{
+		al_translate_transform(&camara, camaraLimiteX * 0.25 - personaje.posX, 0);
+	}
+	else if (personaje.posX > camaraLimiteX * 0.75) //Derecha
+	{
+		al_translate_transform(&camara, camaraLimiteX * 0.75 - personaje.posX, 0);
+	}
+	
+	//Movimiento pantalla en eje y
+	if (personaje.posY > ANCHO_PANTALLA * 0.75) //Arriba
+	{
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.75 - personaje.posY);
+	}
+	else if (personaje.posY < ANCHO_PANTALLA * 0.25) //Abajo
+	{
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.25 - personaje.posY);
+	}
+
+	//Usar los movimientos
+	al_use_transform(&camara);
 }
