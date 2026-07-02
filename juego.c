@@ -16,10 +16,12 @@
 
 //Terminar Camara
 
-//Mejorar Cambios de habitacion
+//Arregla sprite personaje
+
+//4 mapas visibles
 
 //Más interacciones (vida, dinero, disparar)
-//Hacer una especie de HUD
+//Dar más vida a los enemigos
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -36,12 +38,21 @@
 
 ////////////////////////////////////////////////////////////////// Estructuras
 
+struct dirJugador_
+{
+	int derecha;
+	int izquierda;
+};
+
+
 typedef struct 
 {
 	int posX;
 	int posY;
 	int velocidad;
 	int movimientoJugador;
+	struct dirJugador_ dirJugador;
+	
 } jugador;
 
 jugador personaje;
@@ -120,6 +131,7 @@ void InputHandle();
 void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
 void Disparo();
 void MovimientoCamara();
+void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -168,7 +180,8 @@ int main(int argc, char **argv)
 		//Dibujar aqui
 		Render(sala, spriteSheet);
 
-		al_rest(0.016); //Hacer descansar el cpu
+		//Hacer descansar el cpu
+		al_rest(0.016); 
 	}
 
 	return 0;
@@ -304,11 +317,15 @@ void MovimientoJugador()
 		if(al_key_down(&estado, ALLEGRO_KEY_D))
 		{
 			personaje.posX += personaje.velocidad; 
+			personaje.dirJugador.derecha = 1;
+			personaje.dirJugador.izquierda = 0;
 		}
 
 		if(al_key_down(&estado, ALLEGRO_KEY_A))
 		{
 			personaje.posX -= personaje.velocidad; 
+			personaje.dirJugador.derecha = 0;
+			personaje.dirJugador.izquierda = 1;
 		}
 
 		if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
@@ -395,33 +412,9 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 
 	DibujarMapa(mapa, spriteSheet);
 
-	//Jugador escalado
-	//al_draw_scaled_bitmap(sprites[2], 0, 0, 64, 64, personaje.posX, personaje.posY, 128, 128, 0);
-
 	//Jugador de SpriteSheet
-	controlSprites += 1;
+	AnimacionPersonaje(spriteSheet);
 	
-	if (controlSprites >= 0)
-	{
-		al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
-	}
-	if (controlSprites > 10)
-	{
-		al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
-	}
-	if (controlSprites > 20)
-	{
-		al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
-	}
-	if (controlSprites > 30)
-	{
-		al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
-	}
-	if(controlSprites > 40)
-	{
-		controlSprites = 0;
-	}
-
 	//Dibujo de balas
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
@@ -439,7 +432,6 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 			al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
 		}
 	}
-	
 	
 	//Puntero del mouse
 	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
@@ -504,6 +496,8 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	//Inicializando jugador
 	personaje.velocidad = 7;
 	personaje.movimientoJugador = 1;
+	personaje.dirJugador.derecha = 0;
+	personaje.dirJugador.izquierda = 1;
 
 	//Inicializando enemigos
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -555,25 +549,75 @@ void MovimientoCamara()
 	int camaraLimiteX = 1920;
 	int camaraLimiteY = 1088;
 
-	if (personaje.posX < camaraLimiteX * 0.25) //Izquierda
+	if (personaje.posX < camaraLimiteX * 0.40) //Izquierda
 	{
-		al_translate_transform(&camara, camaraLimiteX * 0.25 - personaje.posX, 0);
+		al_translate_transform(&camara, camaraLimiteX * 0.40 - personaje.posX, 0);
 	}
-	else if (personaje.posX > camaraLimiteX * 0.75) //Derecha
+	else if (personaje.posX > camaraLimiteX * 0.60) //Derecha
 	{
-		al_translate_transform(&camara, camaraLimiteX * 0.75 - personaje.posX, 0);
+		al_translate_transform(&camara, camaraLimiteX * 0.60 - personaje.posX, 0);
 	}
 	
 	//Movimiento pantalla en eje y
-	if (personaje.posY > ANCHO_PANTALLA * 0.75) //Arriba
+	if (personaje.posY > ANCHO_PANTALLA * 0.60) //Arriba
 	{
-		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.75 - personaje.posY);
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.60 - personaje.posY);
 	}
-	else if (personaje.posY < ANCHO_PANTALLA * 0.25) //Abajo
+	else if (personaje.posY < ANCHO_PANTALLA * 0.40) //Abajo
 	{
-		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.25 - personaje.posY);
+		al_translate_transform(&camara, 0, ANCHO_PANTALLA * 0.40 - personaje.posY);
 	}
 
 	//Usar los movimientos
 	al_use_transform(&camara);
+}
+
+void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
+{
+	controlSprites += 1;
+	
+	if (personaje.dirJugador.derecha != 0)
+	{
+		if (controlSprites > 0 && controlSprites <= 10)
+		{
+			al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 10 && controlSprites <= 20)
+		{
+			al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 20 && controlSprites <= 30)
+		{
+			al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 30 && controlSprites <= 40)
+		{
+			al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+	}
+
+	if (personaje.dirJugador.izquierda != 0)
+	{
+		if (controlSprites > 0 && controlSprites <= 10)
+		{
+			al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 10 && controlSprites <= 20)
+		{
+			al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 20 && controlSprites <= 30)
+		{
+			al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 30 && controlSprites <= 40)
+		{
+			al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+	}
+	
+	if(controlSprites >= 40)
+	{
+		controlSprites = 0;
+	}
 }
