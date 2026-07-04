@@ -16,8 +16,6 @@
 
 //Terminar Camara
 
-//Arregla sprite personaje
-
 //4 mapas visibles
 
 //Más interacciones (vida, dinero, disparar)
@@ -97,6 +95,7 @@ typedef struct
 	int posY;
 	int velocidad;
 	int activa;
+	int direccion; //1 = derecha, 2 = izquierda, 3 = arriba, 4 = abajo
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
@@ -132,6 +131,7 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
+void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
@@ -428,13 +428,7 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 	}
 	
 	//Dibujo enemigos
-	for (int i = 0; i < MAX_ENEMIGOS; i++)
-	{
-		if (slime[i].activa != 0)
-		{
-			al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
-		}
-	}
+	AnimacionEnemigos(spriteSheet);
 	
 	//Puntero del mouse
 	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
@@ -510,6 +504,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].velocidad = 3;
 		slime[i].activa = 0;
 		slime[i].tipo = 0;
+		slime[i].direccion = 0;
 	}
 
 	//Inicializando balas
@@ -626,6 +621,57 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
 	}
 }
 
+void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
+{
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (slime[i].activa != 0)
+		{
+			//Animacion en dir izquierda
+			if(slime[i].direccion == 2)
+			{
+				if (controlSprites >= 0 && controlSprites <= 10)
+				{
+					al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
+				}
+				if (controlSprites > 10 && controlSprites <= 20)
+				{
+					al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
+				}
+				if (controlSprites > 20 && controlSprites <= 30)
+				{
+					al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
+				}
+				if (controlSprites > 30 && controlSprites <= 40)
+				{
+					al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, 0);
+				}
+			}
+
+			//Animacion en dir derecha
+			if(slime[i].direccion == 1)
+			{
+				if (controlSprites >= 0 && controlSprites <= 10)
+				{
+					al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, ALLEGRO_FLIP_HORIZONTAL);
+				}
+				if (controlSprites > 10 && controlSprites <= 20)
+				{
+					al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, ALLEGRO_FLIP_HORIZONTAL);
+				}
+				if (controlSprites > 20 && controlSprites <= 30)
+				{
+					al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, ALLEGRO_FLIP_HORIZONTAL);
+				}
+				if (controlSprites > 30 && controlSprites <= 40)
+				{
+					al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 22 * TAMANHO, TAMANHO, TAMANHO, slime[i].posX, slime[i].posY, ALLEGRO_FLIP_HORIZONTAL);
+				}
+			}
+		}
+	}
+}
+
 void LogicaEnemigos()
 {
 	//Probando eje y
@@ -644,12 +690,13 @@ void LogicaEnemigos()
 		if (personaje.posX < slime[i].posX)
 		{
 			slime[i].posX -= slime[i].velocidad;
+			slime[i].direccion = 2;
 		}
 
 		if (personaje.posX > slime[i].posX)
 		{
 			slime[i].posX += slime[i].velocidad;
+			slime[i].direccion = 1;
 		}
 	}
-	
 }
