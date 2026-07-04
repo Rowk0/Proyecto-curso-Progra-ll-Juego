@@ -52,7 +52,6 @@ typedef struct
 	int velocidad;
 	int movimientoJugador;
 	struct dirJugador_ dirJugador;
-	
 } jugador;
 
 jugador personaje;
@@ -93,6 +92,7 @@ int cadencia = 0;
 
 typedef struct 
 {
+	int tipo;
 	int posX;
 	int posY;
 	int velocidad;
@@ -132,6 +132,7 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
+void LogicaEnemigos();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -194,6 +195,8 @@ void Logica()
 	Disparo();
 
 	MovimientoCamara();
+
+	LogicaEnemigos();
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -504,8 +507,9 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	{
 		slime[i].posX = 0;
 		slime[i].posY = 0;
-		slime[i].velocidad = 5;
+		slime[i].velocidad = 3;
 		slime[i].activa = 0;
+		slime[i].tipo = 0;
 	}
 
 	//Inicializando balas
@@ -620,4 +624,32 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
 	{
 		controlSprites = 0;
 	}
+}
+
+void LogicaEnemigos()
+{
+	//Probando eje y
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (personaje.posY > slime[i].posY)
+		{
+			slime[i].posY += slime[i].velocidad;
+		}
+
+		if (personaje.posY < slime[i].posY)
+		{
+			slime[i].posY -= slime[i].velocidad;
+		}
+
+		if (personaje.posX < slime[i].posX)
+		{
+			slime[i].posX -= slime[i].velocidad;
+		}
+
+		if (personaje.posX > slime[i].posX)
+		{
+			slime[i].posX += slime[i].velocidad;
+		}
+	}
+	
 }
