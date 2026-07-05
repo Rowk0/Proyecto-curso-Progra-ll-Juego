@@ -42,7 +42,6 @@ struct dirJugador_
 	int izquierda;
 };
 
-
 typedef struct 
 {
 	int posX;
@@ -77,6 +76,7 @@ typedef	struct
 	int posY;
 	int velocidad;
 	int activa; 
+	int danho;
 	struct dirBala_ dirBala;
 } bala_;
 
@@ -96,6 +96,7 @@ typedef struct
 	int velocidad;
 	int activa;
 	int direccion; //1 = derecha, 2 = izquierda, 3 = arriba, 4 = abajo
+	int vida;
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
@@ -133,8 +134,9 @@ void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
+void ColisionEnemigos();
 
-//Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) esquina inferior derecha
+//Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
 bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
@@ -423,7 +425,11 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 	{
 		if (bala[i].activa != 0)
 		{
-			al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
+			//Bala circular
+			//al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
+
+			//Bala cuadrada
+			al_draw_filled_rectangle(bala[i].posX, bala[i].posY, bala[i].posX + (TAMANHO / 4), bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
 		}
 	}
 	
@@ -505,6 +511,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].activa = 0;
 		slime[i].tipo = 0;
 		slime[i].direccion = 0;
+		slime[i].vida = 4;
 	}
 
 	//Inicializando balas
@@ -518,6 +525,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		bala[i].dirBala.arriba = 0;
 		bala[i].dirBala.derecha = 0;
 		bala[i].dirBala.izquierda = 0;
+		bala[i].danho = 1;
 	}
 }
 
@@ -674,29 +682,63 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 
 void LogicaEnemigos()
 {
-	//Probando eje y
+	ColisionEnemigos();
+
+	//Slime persiguiendo al jugador
+	
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{		
+		if (slime[i].activa != 0)
+		{
+			if (personaje.posY > slime[i].posY)
+			{
+				slime[i].posY += slime[i].velocidad;
+			}
+
+			if (personaje.posY < slime[i].posY)
+			{
+				slime[i].posY -= slime[i].velocidad;
+			}
+
+			if (personaje.posX < slime[i].posX)
+			{
+				slime[i].posX -= slime[i].velocidad;
+				slime[i].direccion = 2;
+			}
+
+			if (personaje.posX > slime[i].posX)
+			{
+				slime[i].posX += slime[i].velocidad;
+				slime[i].direccion = 1;
+			}
+		}
+	}
+}
+
+void ColisionEnemigos()
+{
+	//Colision slime y bala
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
-		if (personaje.posY > slime[i].posY)
+		if (slime[i].activa != 0)
 		{
-			slime[i].posY += slime[i].velocidad;
-		}
+			for (int j = 0; j < MAX_BALAS; j++)
+			{
+				if (Colicion(slime[i].posX, slime[i].posY, TAMANHO, TAMANHO, bala[j].posX, bala[j].posY, TAMANHO / 4, TAMANHO / 4))
+				{
+					if(bala[j].activa != 0)
+					{
+						slime[i].vida -= bala[j].danho;
+						bala[j].activa = 0;
+						printf("Vida de slime: %d", slime[i].vida);
+					}
 
-		if (personaje.posY < slime[i].posY)
-		{
-			slime[i].posY -= slime[i].velocidad;
-		}
-
-		if (personaje.posX < slime[i].posX)
-		{
-			slime[i].posX -= slime[i].velocidad;
-			slime[i].direccion = 2;
-		}
-
-		if (personaje.posX > slime[i].posX)
-		{
-			slime[i].posX += slime[i].velocidad;
-			slime[i].direccion = 1;
+					if(slime[i].vida <= 0)
+					{
+						slime[i].activa = 0;
+					}
+				}
+			}
 		}
 	}
 }
