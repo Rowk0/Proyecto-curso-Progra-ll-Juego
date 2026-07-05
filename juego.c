@@ -14,6 +14,8 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
+//Mouse
+
 //Terminar Camara
 
 //4 mapas visibles
@@ -274,6 +276,14 @@ void Disparo()
 			bala[i].posY += bala[i].velocidad;
 		}
 
+		if (ColisionMapa(sala, bala[i].posX, bala[i].posY) || 
+		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY) || 
+		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY + (TAMANHO/4) - 1) ||
+		ColisionMapa(sala, bala[i].posX, bala[i].posY + (TAMANHO/4) - 1))
+		{
+			bala[i].activa = 0;
+		}
+
 		if (bala[i].dirBala.derecha != 0)
 		{
 			bala[i].posX += bala[i].velocidad;
@@ -282,6 +292,14 @@ void Disparo()
 		if (bala[i].dirBala.izquierda != 0)
 		{
 			bala[i].posX -= bala[i].velocidad;
+		}
+
+		if (ColisionMapa(sala, bala[i].posX, bala[i].posY) || 
+		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY) || 
+		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY + (TAMANHO/4) - 1) ||
+		ColisionMapa(sala, bala[i].posX, bala[i].posY + (TAMANHO/4) - 1))
+		{
+			bala[i].activa = 0;
 		}
 	}
 
@@ -445,9 +463,17 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 
 bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo)
 {
+	int columna = 0;
+	int fila = 0;
+
+	if (jugadorPosXProximo < 0 || jugadorPosYProximo < 0)
+    {
+        return false; 
+    }
+
 	//Convertimos la posicion del jugador en indice del arreglo del mapa
-	int columna = jugadorPosXProximo / TAMANHO;
-	int fila = jugadorPosYProximo / TAMANHO;
+	columna = jugadorPosXProximo / TAMANHO;
+	fila = jugadorPosYProximo / TAMANHO;
 
 	//Validamos que no nos salimos del arreglo
 	if(fila >= 0 && fila < FILAS && columna >= 0 && columna < COLUMNAS)
@@ -682,14 +708,20 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 
 void LogicaEnemigos()
 {
+	//Colicion slime y pared
+	int auxXSlime = 0;
+	int auxYSlime = 0;
+
 	ColisionEnemigos();
 
 	//Slime persiguiendo al jugador
-	
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{		
 		if (slime[i].activa != 0)
 		{
+			auxXSlime = slime[i].posX;
+			auxYSlime = slime[i].posY;
+
 			if (personaje.posY > slime[i].posY)
 			{
 				slime[i].posY += slime[i].velocidad;
@@ -698,6 +730,14 @@ void LogicaEnemigos()
 			if (personaje.posY < slime[i].posY)
 			{
 				slime[i].posY -= slime[i].velocidad;
+			}
+
+			if (ColisionMapa(sala, slime[i].posX, slime[i].posY) || 
+			ColisionMapa(sala, slime[i].posX + TAMANHO - 1, slime[i].posY) || 
+			ColisionMapa(sala, slime[i].posX + TAMANHO - 1, slime[i].posY + TAMANHO - 1) ||
+			ColisionMapa(sala, slime[i].posX, slime[i].posY + TAMANHO - 1))
+			{
+				slime[i].posY = auxYSlime;
 			}
 
 			if (personaje.posX < slime[i].posX)
@@ -711,17 +751,25 @@ void LogicaEnemigos()
 				slime[i].posX += slime[i].velocidad;
 				slime[i].direccion = 1;
 			}
+
+			if (ColisionMapa(sala, slime[i].posX, slime[i].posY) || 
+			ColisionMapa(sala, slime[i].posX + TAMANHO - 1, slime[i].posY) || 
+			ColisionMapa(sala, slime[i].posX + TAMANHO - 1, slime[i].posY + TAMANHO - 1) ||
+			ColisionMapa(sala, slime[i].posX, slime[i].posY + TAMANHO - 1))
+			{
+				slime[i].posX = auxXSlime;
+			}
 		}
 	}
 }
 
 void ColisionEnemigos()
 {
-	//Colision slime y bala
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
 		if (slime[i].activa != 0)
 		{
+			//Colision slime y bala
 			for (int j = 0; j < MAX_BALAS; j++)
 			{
 				if (Colicion(slime[i].posX, slime[i].posY, TAMANHO, TAMANHO, bala[j].posX, bala[j].posY, TAMANHO / 4, TAMANHO / 4))
