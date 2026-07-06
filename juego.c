@@ -2,8 +2,10 @@
 #include <allegro5/allegro.h> 
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
-#define FILAS 17
-#define COLUMNAS 30
+#define FILAS_HABITACION 17
+#define COLUMNAS_HABITACION 30
+#define FILAS_MAPA 5
+#define COLUMNAS_MAPA 5
 #define TAMANHO 64
 #define LARGO_TEXTO 30
 #define LARGO_SPRITES 30
@@ -112,7 +114,14 @@ ALLEGRO_KEYBOARD_STATE estado;
 ALLEGRO_MOUSE_STATE estadoMouse;
 
 //En este arreglo se carga el mapa, y en base a él, se dibuja
-char sala[FILAS][COLUMNAS];
+char sala[FILAS_HABITACION][COLUMNAS_HABITACION];
+
+//Aqui se guarda el nombre de los archivos en un arreglo simulando un mapa
+char *mapa[FILAS_MAPA][COLUMNAS_MAPA];
+
+//Control de ubicacion de mapa
+int actualMapaX = 3;
+int actualMapaY = 3;
 
 //Cuando JUEGO = 0, el while termina y se cierra el programa
 int JUEGO = 1;
@@ -122,21 +131,22 @@ int controlSprites = 0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS][COLUMNAS], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS]);
-bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo);
+void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS]);
+bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica();
 void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
 void InputHandle();
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 void ColisionEnemigos();
+void CambioDeHabitaciones();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -176,12 +186,6 @@ int main(int argc, char **argv)
 		//Logica del juego. Ej: movimientos del jugador
 		Logica();
 
-		//Cuando funcione correctamente lo pondré en logica
-		if (personaje.posX < 0) 
-		{
-			cargarMapa(nombreHabitacion2, archivoMapas, sala, &personaje, slime);
-		}
-
 		//Dibujar aqui
 		Render(sala, spriteSheet);
 
@@ -201,6 +205,8 @@ void Logica()
 	MovimientoCamara();
 
 	LogicaEnemigos();
+
+	CambioDeHabitaciones();
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -362,7 +368,7 @@ void MovimientoJugador()
 	
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS][COLUMNAS], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
 {
 
 	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
@@ -370,9 +376,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		return 0;
 	} 
 
-	for (int i = 0; i < FILAS; i++) 
+	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
-    	for (int j = 0; j < COLUMNAS; j++) 
+    	for (int j = 0; j < COLUMNAS_HABITACION; j++) 
 		{
 			//fscanf ignora los espacios y saltos de lineas 
         	fscanf(archivoMapa, " %c", &mapa[i][j]);
@@ -402,11 +408,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	}
 }
 
-void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
+void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet)
 {
-	for (int i = 0; i < FILAS; i++)
+	for (int i = 0; i < FILAS_HABITACION; i++)
 	{
-		for (int j = 0; j < COLUMNAS; j++)
+		for (int j = 0; j < COLUMNAS_HABITACION; j++)
 		{
 			if (mapa[i][j] == '#')
 			{
@@ -427,7 +433,7 @@ void DibujarMapa(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 	}
 }
 
-void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet)
 {
 
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -461,7 +467,7 @@ void Render(char mapa[FILAS][COLUMNAS], ALLEGRO_BITMAP *spriteSheet)
 	al_flip_display();
 }
 
-bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugadorPosYProximo)
+bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo)
 {
 	int columna = 0;
 	int fila = 0;
@@ -476,7 +482,7 @@ bool ColisionMapa(char mapa[FILAS][COLUMNAS], int jugadorPosXProximo, int jugado
 	fila = jugadorPosYProximo / TAMANHO;
 
 	//Validamos que no nos salimos del arreglo
-	if(fila >= 0 && fila < FILAS && columna >= 0 && columna < COLUMNAS)
+	if(fila >= 0 && fila < FILAS_HABITACION && columna >= 0 && columna < COLUMNAS_HABITACION)
 	{
 		if(mapa[fila][columna] == '#')
 		{
@@ -553,6 +559,18 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		bala[i].dirBala.izquierda = 0;
 		bala[i].danho = 1;
 	}
+
+	for (int i = 0; i < FILAS_MAPA; i++)
+	{
+		for (int j = 0; i < COLUMNAS_MAPA; i++)
+		{
+			mapa[i][j] = NULL;
+		}
+	}
+
+	mapa[3][3] = "mapas.txt";
+	mapa[3][2] = "mapaTest2.txt";
+	mapa[4][3] = "mapaSurTest.txt";
 }
 
 void InputHandle()
@@ -787,6 +805,71 @@ void ColisionEnemigos()
 					}
 				}
 			}
+		}
+	}
+}
+
+void CambioDeHabitaciones()
+{
+	FILE *archivoHabitacion = NULL;
+	
+	if (personaje.posX < 0)
+	{
+		if (mapa[actualMapaY][actualMapaX - 1] != NULL)
+		{
+			actualMapaX --;
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+
+			personaje.posX = LARGO_PANTALLA - TAMANHO;
+		}
+		else
+		{
+			personaje.posX = 0;
+		}
+	}
+
+	if (personaje.posX > LARGO_PANTALLA - TAMANHO)
+	{
+		if (mapa[actualMapaY][actualMapaX + 1] != NULL)
+		{
+			actualMapaX ++;
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+
+			personaje.posX = TAMANHO;
+		}
+		else
+		{
+			personaje.posX = LARGO_PANTALLA - TAMANHO;
+		}
+	}
+
+	if (personaje.posY > ANCHO_PANTALLA - TAMANHO)
+	{
+		if (mapa[actualMapaY + 1][actualMapaX] != NULL)
+		{
+			actualMapaY ++;
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+
+			personaje.posY = TAMANHO;
+		}
+		else
+		{
+			personaje.posY = ANCHO_PANTALLA - TAMANHO;
+		}
+	}
+
+	if (personaje.posY < 0)
+	{
+		if (mapa[actualMapaY - 1][actualMapaX] != NULL)
+		{
+			actualMapaY --;
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+
+			personaje.posY = ANCHO_PANTALLA - TAMANHO;
+		}
+		else
+		{
+			personaje.posY = 0;
 		}
 	}
 }
