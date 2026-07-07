@@ -2,6 +2,7 @@
 #include <allegro5/allegro.h> 
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
+#include <math.h>
 #define FILAS_HABITACION 17
 #define COLUMNAS_HABITACION 30
 #define FILAS_MAPA 5
@@ -22,8 +23,6 @@
 
 //Resolver la activacion de slimes una vez limpias las salas
 
-//Mouse
-
 //4 mapas visibles
 
 //tipos de habitaciones 
@@ -32,7 +31,7 @@
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
-//gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image
+//gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image -lm 
 //para compilar
 
 //./juego 
@@ -87,6 +86,8 @@ typedef	struct
 	int activa; 
 	int danho;
 	struct dirBala_ dirBala;
+	float anguloBalaX;
+	float anguloBalaY;
 } bala_;
 
 bala_ bala[MAX_BALAS];
@@ -133,6 +134,9 @@ int JUEGO = 1;
 
 //Control de sprites del personaje
 int controlSprites = 0;
+
+//Se guarda la direccion de la bala en base al mouse
+float direccionBala = 0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
@@ -222,7 +226,7 @@ void Disparo()
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
 
-	if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
+	/*if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
 	{	
 		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
 		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
@@ -272,12 +276,33 @@ void Disparo()
 		bala[balaActual].dirBala.izquierda= 1;
 		balaActual++;
 		cadencia = 0;
+	}*/
+
+	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
+	{
+		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		bala[balaActual].activa = 1;
+		direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
+		bala[balaActual].anguloBalaX = cos(direccionBala) * bala[balaActual].velocidad;
+		bala[balaActual].anguloBalaY = sin(direccionBala) * bala[balaActual].velocidad;
+		balaActual++;
+		cadencia = 0;
 	}
 
 	//Aumenta constantemente bala[i].posY/bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		if (bala[i].dirBala.arriba != 0)
+
+		///////////////////////////////////////////// bala desde el mouse
+		if (bala[i].activa != 0)
+		{
+			bala[i].posX += bala[i].anguloBalaX;
+			bala[i].posY += bala[i].anguloBalaY;
+		}
+		//////////////////////////////////////////// bala desde el teclado
+
+		/*if (bala[i].dirBala.arriba != 0)
 		{
 			bala[i].posY -= bala[i].velocidad;
 		}
@@ -285,14 +310,6 @@ void Disparo()
 		if (bala[i].dirBala.abajo != 0)
 		{
 			bala[i].posY += bala[i].velocidad;
-		}
-
-		if (ColisionMapa(sala, bala[i].posX, bala[i].posY) || 
-		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY) || 
-		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY + (TAMANHO/4) - 1) ||
-		ColisionMapa(sala, bala[i].posX, bala[i].posY + (TAMANHO/4) - 1))
-		{
-			bala[i].activa = 0;
 		}
 
 		if (bala[i].dirBala.derecha != 0)
@@ -303,7 +320,7 @@ void Disparo()
 		if (bala[i].dirBala.izquierda != 0)
 		{
 			bala[i].posX -= bala[i].velocidad;
-		}
+		}*/
 
 		if (ColisionMapa(sala, bala[i].posX, bala[i].posY) || 
 		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY) || 
@@ -482,7 +499,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	AnimacionEnemigos(spriteSheet);
 	
 	//Puntero del mouse
-	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
+	al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
 
 	////////////////////////////////////////////////
 	al_flip_display();
@@ -579,6 +596,8 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		bala[i].dirBala.derecha = 0;
 		bala[i].dirBala.izquierda = 0;
 		bala[i].danho = 1;
+		bala[i].anguloBalaX = 0;
+		bala[i].anguloBalaY = 0;
 	}
 
 	for (int i = 0; i < FILAS_MAPA; i++)
