@@ -14,16 +14,21 @@
 #define MAX_BALAS 20
 #define MAX_ENEMIGOS 20
 
+//Ideas deshechadas: 
+//Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
+//Ver todas las habitaciones mientras te mueves: eso implica hacer más condicionales en enemigos, reformular cargar mapa
+
 ////////////////////////////////////////////////////////////////  tareas
+
+//Resolver la activacion de slimes una vez limpias las salas
 
 //Mouse
 
-//Terminar Camara
-
 //4 mapas visibles
 
-//Más interacciones (vida, dinero, disparar)
-//Dar más vida a los enemigos
+//tipos de habitaciones 
+
+//Más interacciones (vida, dinero, power-ups)
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -202,7 +207,7 @@ void Logica()
 
 	Disparo();
 
-	MovimientoCamara();
+	//MovimientoCamara();
 
 	LogicaEnemigos();
 
@@ -376,6 +381,18 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		return 0;
 	} 
 
+	//Reinicio de enemigos
+	for (int k = 0; k < MAX_ENEMIGOS; k++)
+	{
+		slime[k].activa = 0;
+	}
+
+	//Reinicio de balas
+	for (int l = 0; l < MAX_ENEMIGOS; l++)
+	{
+		bala[l].activa = 0;
+	}
+
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
     	for (int j = 0; j < COLUMNAS_HABITACION; j++) 
@@ -389,13 +406,13 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				personaje->posX = j * TAMANHO;
 				personaje->posY = i * TAMANHO;
 			}
-
+			
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
 			{
+				enemigo[slimeActual].activa = 1;
 				enemigo[slimeActual].posX = j * TAMANHO;
 				enemigo[slimeActual].posY = i * TAMANHO;
-				enemigo[slimeActual].activa = 1;
 				slimeActual ++;
 			}
 
@@ -403,7 +420,6 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				slimeActual = 0;
 			}
-			
     	}
 	}
 }
@@ -425,6 +441,11 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 			}
 
 			if (mapa[i][j] == '@')
+			{
+				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 's')
 			{
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
@@ -571,6 +592,8 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	mapa[3][3] = "mapas.txt";
 	mapa[3][2] = "mapaTest2.txt";
 	mapa[4][3] = "mapaSurTest.txt";
+	mapa[2][3] = "mapaNorteTest.txt";
+	mapa[3][4] = "mapaEsteTest.txt";
 }
 
 void InputHandle()
@@ -857,7 +880,7 @@ void CambioDeHabitaciones()
 			personaje.posY = ANCHO_PANTALLA - TAMANHO;
 		}
 	}
-
+	
 	if (personaje.posY < 0)
 	{
 		if (mapa[actualMapaY - 1][actualMapaX] != NULL)
