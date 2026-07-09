@@ -21,11 +21,17 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
+//Hacer caminar el sprite
+//Sprite bala
+//Menu funcional
+//Enemigo estatico que dispare patrones.
+//Puntaje y monedas
+
 //Resolver la activacion de slimes una vez limpias las salas
 
-//4 mapas visibles
-
 //tipos de habitaciones 
+
+//Cmabiar metodo de cambio entre habitaciones por puertas
 
 //Más interacciones (vida, dinero, power-ups)
 
@@ -148,10 +154,10 @@ void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
 void InputHandle();
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
 void Disparo();
 void MovimientoCamara();
-void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet);
+void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 void ColisionEnemigos();
@@ -168,7 +174,7 @@ int main(int argc, char **argv)
 { 
 	/////////////////////////////////////////////////////////////// Declaraciones de una vez
 	FILE *archivoMapas = NULL;
-	char nombreHabitacion[LARGO_TEXTO] = "mapas.txt";
+	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
 	char nombreHabitacion2[LARGO_TEXTO] = "mapaTest2.txt";
 
 	//Crear ventana
@@ -176,6 +182,8 @@ int main(int argc, char **argv)
 
 	//Sprites
 	ALLEGRO_BITMAP *spriteSheet;
+	ALLEGRO_BITMAP *spriteSheetBalas;
+	ALLEGRO_BITMAP *spriteSheetCaminarCaballero;
 	
 	///////////////////////////////////////////////////////////////
 
@@ -187,6 +195,10 @@ int main(int argc, char **argv)
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
+	spriteSheetBalas = al_load_bitmap("sp.guns.png");
+
+	spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
+
 	while (JUEGO)
 	{
 		//Funcion que actualiza el estado del teclado y mouse
@@ -196,7 +208,7 @@ int main(int argc, char **argv)
 		Logica();
 
 		//Dibujar aqui
-		Render(sala, spriteSheet);
+		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero);
 
 		//Hacer descansar el cpu
 		al_rest(0.016); 
@@ -344,50 +356,50 @@ void MovimientoJugador()
 	int auxX = personaje.posX;
 	int auxY = personaje.posY;
 
-	if (personaje.movimientoJugador == 1)
+	if(al_key_down(&estado, ALLEGRO_KEY_W))
 	{
-		if(al_key_down(&estado, ALLEGRO_KEY_W))
-		{
-			personaje.posY -= personaje.velocidad; 
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_S))
-		{
-			personaje.posY += personaje.velocidad; 
-		}
-
-		//Luego de verificar la posY se comprueba si cada esquina del jugador está en colision con '#' en el arreglo del mapa
-		if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
-		ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
-		ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
-		ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
-		{
-			personaje.posY = auxY;
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_D))
-		{
-			personaje.posX += personaje.velocidad; 
-			personaje.dirJugador.derecha = 1;
-			personaje.dirJugador.izquierda = 0;
-		}
-
-		if(al_key_down(&estado, ALLEGRO_KEY_A))
-		{
-			personaje.posX -= personaje.velocidad; 
-			personaje.dirJugador.derecha = 0;
-			personaje.dirJugador.izquierda = 1;
-		}
-
-		if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
-		ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
-		ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
-		ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
-		{
-			personaje.posX = auxX;
-		}
+		personaje.posY -= personaje.velocidad; 
+		personaje.movimientoJugador = 1;
 	}
-	
+
+	if(al_key_down(&estado, ALLEGRO_KEY_S))
+	{
+		personaje.posY += personaje.velocidad; 
+		personaje.movimientoJugador = 1;
+	}
+
+	//Luego de verificar la posY se comprueba si cada esquina del jugador está en colision con '#' en el arreglo del mapa
+	if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
+	ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
+	{
+		personaje.posY = auxY;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_D))
+	{
+		personaje.posX += personaje.velocidad; 
+		personaje.dirJugador.derecha = 1;
+		personaje.dirJugador.izquierda = 0;
+		personaje.movimientoJugador = 1;
+	}
+
+	if(al_key_down(&estado, ALLEGRO_KEY_A))
+	{
+		personaje.posX -= personaje.velocidad; 
+		personaje.dirJugador.derecha = 0;
+		personaje.dirJugador.izquierda = 1;
+		personaje.movimientoJugador = 1;
+	}
+
+	if (ColisionMapa(sala, personaje.posX, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY) || 
+	ColisionMapa(sala, personaje.posX + TAMANHO - 1, personaje.posY + TAMANHO - 1) ||
+	ColisionMapa(sala, personaje.posX, personaje.posY + TAMANHO - 1))
+	{
+		personaje.posX = auxX;
+	}
 }
 
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
@@ -427,10 +439,13 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
 			{
-				enemigo[slimeActual].activa = 1;
-				enemigo[slimeActual].posX = j * TAMANHO;
-				enemigo[slimeActual].posY = i * TAMANHO;
-				slimeActual ++;
+				if(enemigo[slimeActual].activa == 0)
+				{
+					enemigo[slimeActual].activa = 1;
+					enemigo[slimeActual].posX = j * TAMANHO;
+					enemigo[slimeActual].posY = i * TAMANHO;
+					slimeActual ++;
+				}
 			}
 
 			if (slimeActual > MAX_ENEMIGOS - 1)
@@ -449,29 +464,42 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 		{
 			if (mapa[i][j] == '#')
 			{
-				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+				//al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+
+				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
-			if (mapa[i][j] == '.')
+			/*if (mapa[i][j] == '.')
 			{
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}*/
+
+			/*if (mapa[i][j] == '@')
+			{
+				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}*/
+
+			/*if (mapa[i][j] == 's')
+			{
+				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}*/
+
+			if (mapa[i][j] == 'a')
+			{
+				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
-			if (mapa[i][j] == '@')
+			if (mapa[i][j] == 'p')
 			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
-			if (mapa[i][j] == 's')
-			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}
 		}
 		printf("\n");
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero)
 {
 
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -480,7 +508,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	DibujarMapa(mapa, spriteSheet);
 
 	//Jugador de SpriteSheet
-	AnimacionPersonaje(spriteSheet);
+	AnimacionPersonaje(spriteSheet, spriteSheetCaminarCaballero);
 	
 	//Dibujo de balas
 	for (int i = 0; i < MAX_BALAS; i++)
@@ -492,6 +520,9 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 			//Bala cuadrada
 			al_draw_filled_rectangle(bala[i].posX, bala[i].posY, bala[i].posX + (TAMANHO / 4), bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
+
+			//Bala sprite (presenta errores)
+			//al_draw_bitmap_region(spriteSheetBalas, 0 * 16, 0 * 16, 16, 16, bala[i].posX, bala[i].posY, 0);
 		}
 	}
 	
@@ -568,7 +599,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 
 	//Inicializando jugador
 	personaje.velocidad = 7;
-	personaje.movimientoJugador = 1;
+	personaje.movimientoJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
 
@@ -608,7 +639,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		}
 	}
 
-	mapa[3][3] = "mapas.txt";
+	mapa[3][3] = "habBase.txt";
 	mapa[3][2] = "mapaTest2.txt";
 	mapa[4][3] = "mapaSurTest.txt";
 	mapa[2][3] = "mapaNorteTest.txt";
@@ -665,11 +696,32 @@ void MovimientoCamara()
 	al_use_transform(&camara);
 }
 
-void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
+void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero)
 {
 	controlSprites += 1;
+
+	printf("%d", personaje.movimientoJugador);
 	
-	if (personaje.dirJugador.derecha != 0)
+	if (personaje.dirJugador.derecha != 0 && personaje.movimientoJugador != 0)
+	{
+		if (controlSprites > 0 && controlSprites <= 10)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 10 && controlSprites <= 20)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 20 && controlSprites <= 30)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+		if (controlSprites > 30 && controlSprites <= 40)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+		}
+	}
+	else if (personaje.dirJugador.derecha != 0)
 	{
 		if (controlSprites > 0 && controlSprites <= 10)
 		{
@@ -689,7 +741,26 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
 		}
 	}
 
-	if (personaje.dirJugador.izquierda != 0)
+	if (personaje.dirJugador.izquierda != 0 && personaje.movimientoJugador != 0)
+	{
+		if (controlSprites > 0 && controlSprites <= 10)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 10 && controlSprites <= 20)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 20 && controlSprites <= 30)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+		if (controlSprites > 30 && controlSprites <= 40)
+		{
+			al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+		}
+	}
+	else if (personaje.dirJugador.izquierda != 0)
 	{
 		if (controlSprites > 0 && controlSprites <= 10)
 		{
@@ -713,6 +784,8 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet)
 	{
 		controlSprites = 0;
 	}
+
+	personaje.movimientoJugador = 0;
 }
 
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
