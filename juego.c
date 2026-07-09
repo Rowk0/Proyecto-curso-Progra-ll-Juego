@@ -21,8 +21,6 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Hacer caminar el sprite
-//Sprite bala
 //Menu funcional
 //Enemigo estatico que dispare patrones.
 //Puntaje y monedas
@@ -142,7 +140,7 @@ int JUEGO = 1;
 int controlSprites = 0;
 
 //Se guarda la direccion de la bala en base al mouse
-float direccionBala = 0;
+float direccionBala = 0.0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
@@ -195,7 +193,7 @@ int main(int argc, char **argv)
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
-	spriteSheetBalas = al_load_bitmap("sp.guns.png");
+	spriteSheetBalas = al_load_bitmap("sp_guns.png");
 
 	spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
 
@@ -519,10 +517,12 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 			//al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
 
 			//Bala cuadrada
-			al_draw_filled_rectangle(bala[i].posX, bala[i].posY, bala[i].posX + (TAMANHO / 4), bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
+			//al_draw_filled_rectangle(bala[i].posX, bala[i].posY, bala[i].posX + (TAMANHO / 4), bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
 
-			//Bala sprite (presenta errores)
-			//al_draw_bitmap_region(spriteSheetBalas, 0 * 16, 0 * 16, 16, 16, bala[i].posX, bala[i].posY, 0);
+			//Bala sprite 
+			//al_draw_bitmap_region(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, bala[i].posX, bala[i].posY, 0);
+
+			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, bala[i].posX - 24, bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
 		}
 	}
 	
