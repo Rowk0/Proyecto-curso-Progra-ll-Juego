@@ -26,14 +26,9 @@
 //Enemigo estatico que dispare patrones.
 //Puntaje y monedas
 
-//3 elementos estaticos
-//3 elementos dinamicos
-
-//Resolver la activacion de slimes una vez limpias las salas
-//añadir tipos de habitaciones 
-//Cmabiar metodo de cambio entre habitaciones por puertas
+//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
+//Cambiar metodo de cambio entre habitaciones por puertas
 //aleatorizar la generacion de habitaciones
-//Más interacciones (vida, dinero, power-ups)
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -118,11 +113,24 @@ typedef struct
 	int activa;
 	int direccion; //1 = derecha, 2 = izquierda, 3 = arriba, 4 = abajo
 	int vida;
+	int posXGeneracion;
+	int posYGeneracion;
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
 
 int slimeActual = 0;
+
+typedef struct 
+{
+	char registroMapa[LARGO_TEXTO];
+	int fila;
+	int columna;
+} registroMuertes_;
+
+registroMuertes_ registroMuertes[1000];
+
+int cantidadMuertos = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -161,7 +169,7 @@ void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
 void InputHandle();
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
@@ -194,6 +202,7 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *spriteSheetBalas;
 	ALLEGRO_BITMAP *spriteSheetCaminarCaballero;
 	ALLEGRO_BITMAP *spriteSheetIcons;
+	ALLEGRO_BITMAP *spriteSheetCrosshair;
 
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
@@ -225,6 +234,8 @@ int main(int argc, char **argv)
 
 	spriteSheetIcons = al_load_bitmap("64x64_icons.png");
 
+	spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
+
 	while (JUEGO)
 	{
 		//Funcion que actualiza el estado del teclado y mouse
@@ -234,7 +245,7 @@ int main(int argc, char **argv)
 		Logica();
 
 		//Dibujar aqui
-		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego);
+		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair);
 
 		//Hacer descansar el cpu
 		al_rest(0.016); 
@@ -453,6 +464,8 @@ void MovimientoJugador()
 
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
 {
+	int muerto = 0;
+	slimeActual = 0;
 
 	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
 	{
@@ -488,12 +501,33 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
 			{
-				if(enemigo[slimeActual].activa == 0)
+				for (int m = 0; m < cantidadMuertos; m++)
 				{
-					enemigo[slimeActual].activa = 1;
-					enemigo[slimeActual].posX = j * TAMANHO;
-					enemigo[slimeActual].posY = i * TAMANHO;
-					slimeActual ++;
+					muerto = 0;
+
+					if (strcmp(registroMuertes[m].registroMapa, nombreMapa) == 0 && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					{
+						muerto = 1;
+						break;
+					}
+				}
+				
+				//Si el slime no esta muerto se genera
+				if (muerto == 0)
+				{
+					if(enemigo[slimeActual].activa == 0)
+					{
+						//Generar slime en la posicion 's' del mapa
+						enemigo[slimeActual].activa = 1;
+						enemigo[slimeActual].posX = j * TAMANHO;
+						enemigo[slimeActual].posY = i * TAMANHO;
+
+						//Registrar la ubicacion original del slime
+						enemigo[slimeActual].posXGeneracion = j;
+						enemigo[slimeActual].posYGeneracion = i;
+
+						slimeActual ++;
+					}
 				}
 			}
 
@@ -548,7 +582,7 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair)
 {
 
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -591,7 +625,9 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	AnimacionEnemigos(spriteSheet);
 	
 	//Puntero del mouse
-	al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
+	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
+
+	al_draw_scaled_bitmap(spriteSheetCrosshair, 10 * 16, 3 * 16, 16, 16, mouse.posX - 30, mouse.posY - 32, TAMANHO, TAMANHO, 0);
 
 	////////////////////////////////////////////////
 	al_flip_display();
@@ -682,6 +718,8 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].tipo = 0;
 		slime[i].direccion = 0;
 		slime[i].vida = 4;
+		slime[i].posXGeneracion = 0;
+		slime[i].posYGeneracion = 0;
 	}
 
 	//Inicializando balas
@@ -1071,10 +1109,22 @@ void ColisionEnemigos()
 						printf("Vida de slime: %d", slime[i].vida);
 					}
 
-					if(slime[i].vida <= 0)
+					if(slime[i].vida <= 0 && slime[i].activa == 1)
 					{
 						slime[i].activa = 0;
 						personaje.cantidadMonedas ++;
+
+						if (cantidadMuertos < 1000)
+						{
+							//Cuando muere un slime se registra el mapa donde murio en una posicion del arreglo
+							strcpy(registroMuertes[cantidadMuertos].registroMapa, mapa[actualMapaY][actualMapaX]);
+
+							//Se registra su lugar de aparicion original
+							registroMuertes[cantidadMuertos].fila = slime[i].posYGeneracion;
+							registroMuertes[cantidadMuertos].columna = slime[i].posXGeneracion;
+
+							cantidadMuertos ++;
+						}
 					}
 				}
 			}
