@@ -13,7 +13,7 @@
 #define LARGO_SPRITES 30
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
-#define MAX_BALAS 2
+#define MAX_BALAS 10
 #define MAX_ENEMIGOS 20
 
 //Ideas deshechadas: 
@@ -24,7 +24,6 @@
 
 //Menu funcional
 //Enemigo estatico que dispare patrones.
-//Puntaje y monedas
 
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
 //Cambiar metodo de cambio entre habitaciones por puertas
@@ -45,6 +44,32 @@
 
 ////////////////////////////////////////////////////////////////// Estructuras
 
+struct dirBala_
+{
+	int derecha;
+	int izquierda;
+	int abajo;
+	int arriba;
+};
+
+//Control de balas
+int balaActual = 0;
+
+//cadencia de disparo
+int cadencia = 0;
+
+typedef	struct 
+{
+	int posX;
+	int posY;
+	int velocidad;
+	int activa; 
+	int danho;
+	struct dirBala_ dirBala;
+	float anguloBalaX;
+	float anguloBalaY;
+} bala_;
+
 struct dirJugador_
 {
 	int derecha;
@@ -61,8 +86,9 @@ typedef struct
 	int vidas;
 	int invulnerable;
 	int cantidadMonedas;
-	//CANTIDAD DE BALAS
-	//bala_ bala[MAX_BALAS];
+	int puntaje;
+	bala_ bala[MAX_BALAS];
+	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
 } jugador;
 
 jugador personaje;
@@ -75,34 +101,6 @@ typedef struct
 } mouse_;
 
 mouse_ mouse;
-
-struct dirBala_
-{
-	int derecha;
-	int izquierda;
-	int abajo;
-	int arriba;
-};
-
-typedef	struct 
-{
-	int posX;
-	int posY;
-	int velocidad;
-	int activa; 
-	int danho;
-	struct dirBala_ dirBala;
-	float anguloBalaX;
-	float anguloBalaY;
-} bala_;
-
-bala_ bala[MAX_BALAS];
-
-//Control de balas
-int balaActual = 0;
-
-//cadencia de disparo
-int cadencia = 0;
 
 typedef struct 
 {
@@ -150,7 +148,6 @@ int actualMapaY = 3;
 
 //Cuando JUEGO = 0, el while termina y se cierra el programa
 int JUEGO = 1;
-
 int MENU = 0;
 
 //Control de sprites del personaje
@@ -162,9 +159,9 @@ float direccionBala = 0.0;
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS]);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica();
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador);
 void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
@@ -179,6 +176,7 @@ void ColisionEnemigos();
 void CambioDeHabitaciones();
 void RenderMenu(ALLEGRO_FONT *fuenteJuego);
 void PersonajeInvulnerable();
+void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -224,7 +222,7 @@ int main(int argc, char **argv)
 		al_rest(0.016);
 	}
 
-	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime);
+	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@');
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
@@ -242,7 +240,7 @@ int main(int argc, char **argv)
 		InputHandle();
 
 		//Logica del juego. Ej: movimientos del jugador
-		Logica();
+		Logica(sala, &personaje);
 
 		//Dibujar aqui
 		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair);
@@ -254,7 +252,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void Logica()
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 {
 	MovimientoJugador();
 
@@ -265,6 +263,8 @@ void Logica()
 	//MovimientoCamara();
 
 	LogicaEnemigos();
+
+	VerificarTraspasoPuertas(mapa, jugador);
 
 	CambioDeHabitaciones();
 	
@@ -286,106 +286,106 @@ void Disparo()
 
 	/*if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
 	{	
-		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		bala[balaActual].activa = 1;
-		bala[balaActual].dirBala.arriba = 1;
-		bala[balaActual].dirBala.abajo = 0;
-		bala[balaActual].dirBala.derecha = 0;
-		bala[balaActual].dirBala.izquierda= 0;
+		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		personaje.bala[balaActual].activa = 1;
+		personaje.bala[balaActual].dirBala.arriba = 1;
+		personaje.bala[balaActual].dirBala.abajo = 0;
+		personaje.bala[balaActual].dirBala.derecha = 0;
+		personaje.bala[balaActual].dirBala.izquierda= 0;
 		balaActual++;
 		cadencia = 0;
 	}
 
 	if(al_key_down(&estado, ALLEGRO_KEY_DOWN) && cadencia > 20)
 	{	
-		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		bala[balaActual].activa = 1;
-		bala[balaActual].dirBala.arriba = 0;
-		bala[balaActual].dirBala.abajo = 1;
-		bala[balaActual].dirBala.derecha = 0;
-		bala[balaActual].dirBala.izquierda= 0;
+		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		personaje.bala[balaActual].activa = 1;
+		personaje.bala[balaActual].dirBala.arriba = 0;
+		personaje.bala[balaActual].dirBala.abajo = 1;
+		personaje.bala[balaActual].dirBala.derecha = 0;
+		personaje.bala[balaActual].dirBala.izquierda= 0;
 		balaActual++;
 		cadencia = 0;
 	}
 
 	if(al_key_down(&estado, ALLEGRO_KEY_RIGHT) && cadencia > 20)
 	{	
-		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		bala[balaActual].activa = 1;
-		bala[balaActual].dirBala.arriba = 0;
-		bala[balaActual].dirBala.abajo = 0;
-		bala[balaActual].dirBala.derecha = 1;
-		bala[balaActual].dirBala.izquierda= 0;
+		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		personaje.bala[balaActual].activa = 1;
+		personaje.bala[balaActual].dirBala.arriba = 0;
+		personaje.bala[balaActual].dirBala.abajo = 0;
+		personaje.bala[balaActual].dirBala.derecha = 1;
+		personaje.bala[balaActual].dirBala.izquierda= 0;
 		balaActual++;
 		cadencia = 0;
 	}
 
 	if(al_key_down(&estado, ALLEGRO_KEY_LEFT) && cadencia > 20)
 	{	
-		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		bala[balaActual].activa = 1;
-		bala[balaActual].dirBala.arriba = 0;
-		bala[balaActual].dirBala.abajo = 0;
-		bala[balaActual].dirBala.derecha = 0;
-		bala[balaActual].dirBala.izquierda= 1;
+		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		personaje.bala[balaActual].activa = 1;
+		personaje.bala[balaActual].dirBala.arriba = 0;
+		personaje.bala[balaActual].dirBala.abajo = 0;
+		personaje.bala[balaActual].dirBala.derecha = 0;
+		personaje.bala[balaActual].dirBala.izquierda= 1;
 		balaActual++;
 		cadencia = 0;
 	}*/
 
 	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
 	{
-		bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		bala[balaActual].activa = 1;
+		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
+		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
+		personaje.bala[balaActual].activa = 1;
 		direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
-		bala[balaActual].anguloBalaX = cos(direccionBala) * bala[balaActual].velocidad;
-		bala[balaActual].anguloBalaY = sin(direccionBala) * bala[balaActual].velocidad;
+		personaje.bala[balaActual].anguloBalaX = cos(direccionBala) * personaje.bala[balaActual].velocidad;
+		personaje.bala[balaActual].anguloBalaY = sin(direccionBala) * personaje.bala[balaActual].velocidad;
 		balaActual++;
 		cadencia = 0;
 	}
 
-	//Aumenta constantemente bala[i].posY/bala[i].posX
+	//Aumenta constantemente personaje.bala[i].posY/personaje.bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 
 		///////////////////////////////////////////// bala desde el mouse
-		if (bala[i].activa != 0)
+		if (personaje.bala[i].activa != 0)
 		{
-			bala[i].posX += bala[i].anguloBalaX;
-			bala[i].posY += bala[i].anguloBalaY;
+			personaje.bala[i].posX += personaje.bala[i].anguloBalaX;
+			personaje.bala[i].posY += personaje.bala[i].anguloBalaY;
 		}
 		//////////////////////////////////////////// bala desde el teclado
 
-		/*if (bala[i].dirBala.arriba != 0)
+		/*if (personaje.bala[i].dirBala.arriba != 0)
 		{
-			bala[i].posY -= bala[i].velocidad;
+			personaje.bala[i].posY -= personaje.bala[i].velocidad;
 		}
 
-		if (bala[i].dirBala.abajo != 0)
+		if (personaje.bala[i].dirBala.abajo != 0)
 		{
-			bala[i].posY += bala[i].velocidad;
+			personaje.bala[i].posY += personaje.bala[i].velocidad;
 		}
 
-		if (bala[i].dirBala.derecha != 0)
+		if (personaje.bala[i].dirBala.derecha != 0)
 		{
-			bala[i].posX += bala[i].velocidad;
+			personaje.bala[i].posX += personaje.bala[i].velocidad;
 		}
 
-		if (bala[i].dirBala.izquierda != 0)
+		if (personaje.bala[i].dirBala.izquierda != 0)
 		{
-			bala[i].posX -= bala[i].velocidad;
+			personaje.bala[i].posX -= personaje.bala[i].velocidad;
 		}*/
 
-		if (ColisionMapa(sala, bala[i].posX, bala[i].posY) || 
-		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY) || 
-		ColisionMapa(sala, bala[i].posX + (TAMANHO/4) - 1, bala[i].posY + (TAMANHO/4) - 1) ||
-		ColisionMapa(sala, bala[i].posX, bala[i].posY + (TAMANHO/4) - 1))
+		if (ColisionMapa(sala, personaje.bala[i].posX, personaje.bala[i].posY) || 
+		ColisionMapa(sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY) || 
+		ColisionMapa(sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY + (TAMANHO/4) - 1) ||
+		ColisionMapa(sala, personaje.bala[i].posX, personaje.bala[i].posY + (TAMANHO/4) - 1))
 		{
-			bala[i].activa = 0;
+			personaje.bala[i].activa = 0;
 		}
 	}
 
@@ -462,7 +462,7 @@ void MovimientoJugador()
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS])
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino)
 {
 	int muerto = 0;
 	slimeActual = 0;
@@ -481,7 +481,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	//Reinicio de balas
 	for (int l = 0; l < MAX_ENEMIGOS; l++)
 	{
-		bala[l].activa = 0;
+		personaje.bala[l].activa = 0;
 	}
 
 	for (int i = 0; i < FILAS_HABITACION; i++) 
@@ -492,11 +492,39 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
         	fscanf(archivoMapa, " %c", &mapa[i][j]);
 
 			//Ubicar posicion personaje
-			if (mapa[i][j]=='@')
+			if (mapa[i][j]=='@' && puertaDestino == '@')
 			{
-				personaje->posX = j * TAMANHO;
-				personaje->posY = i * TAMANHO;
+				jugador->posX = j * TAMANHO;
+				jugador->posY = i * TAMANHO;
 			}
+
+			if (mapa[i][j] == puertaDestino)
+			{
+				jugador->posX = j * TAMANHO;
+				jugador->posY = i * TAMANHO;
+
+				if (puertaDestino == 'N')
+				{
+					jugador->posY += TAMANHO; 	
+				}
+
+				if (puertaDestino == 'S')
+				{
+					jugador->posY -= TAMANHO;
+				}
+
+				if (puertaDestino == 'E')
+				{
+					jugador->posX -= TAMANHO; 	
+				}
+
+				if (puertaDestino == 'O')
+				{
+					jugador->posX += TAMANHO; 	
+				}
+				
+			}
+			
 			
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
@@ -567,10 +595,10 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}*/
 
-			if (mapa[i][j] == 'a')
+			/*if (mapa[i][j] == 'a')
 			{
 				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}
+			}*/
 
 			if (mapa[i][j] == 'p')
 			{
@@ -597,6 +625,9 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, TAMANHO, TAMANHO + TAMANHO / 2, 0);
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO + 80, TAMANHO + 50, 0, "= %d", personaje.cantidadMonedas);
 
+	//Puntaje Jugador
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 23, TAMANHO, 0, "Puntaje: %d", personaje.puntaje);
+
 	//Vidas jugador
 	for (int j = 0; j < personaje.vidas; j++)
 	{
@@ -606,18 +637,18 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	//Dibujo de balas
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		if (bala[i].activa != 0)
+		if (personaje.bala[i].activa != 0)
 		{
 			//Bala circular
-			//al_draw_filled_circle(bala[i].posX, bala[i].posY, 8, al_map_rgb(0, 255, 255));
+			//al_draw_filled_circle(personaje.bala[i].posX, personaje.bala[i].posY, 8, al_map_rgb(0, 255, 255));
 
 			//Bala cuadrada
-			//al_draw_filled_rectangle(bala[i].posX, bala[i].posY, bala[i].posX + (TAMANHO / 4), bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
+			//al_draw_filled_rectangle(personaje.bala[i].posX, personaje.bala[i].posY, personaje.bala[i].posX + (TAMANHO / 4), personaje.bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
 
 			//Bala sprite 
-			//al_draw_bitmap_region(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, bala[i].posX, bala[i].posY, 0);
+			//al_draw_bitmap_region(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, personaje.bala[i].posX, personaje.bala[i].posY, 0);
 
-			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, bala[i].posX - 24, bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
+			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, personaje.bala[i].posX - 24, personaje.bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
 		}
 	}
 	
@@ -725,17 +756,17 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	//Inicializando balas
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		bala[i].posX = 0;
-		bala[i].posY = 0;
-		bala[i].velocidad = 10;
-		bala[i].activa = 0;
-		bala[i].dirBala.abajo = 0;
-		bala[i].dirBala.arriba = 0;
-		bala[i].dirBala.derecha = 0;
-		bala[i].dirBala.izquierda = 0;
-		bala[i].danho = 1;
-		bala[i].anguloBalaX = 0;
-		bala[i].anguloBalaY = 0;
+		personaje.bala[i].posX = 0;
+		personaje.bala[i].posY = 0;
+		personaje.bala[i].velocidad = 10;
+		personaje.bala[i].activa = 0;
+		personaje.bala[i].dirBala.abajo = 0;
+		personaje.bala[i].dirBala.arriba = 0;
+		personaje.bala[i].dirBala.derecha = 0;
+		personaje.bala[i].dirBala.izquierda = 0;
+		personaje.bala[i].danho = 1;
+		personaje.bala[i].anguloBalaX = 0;
+		personaje.bala[i].anguloBalaY = 0;
 	}
 
 	for (int i = 0; i < FILAS_MAPA; i++)
@@ -1100,12 +1131,12 @@ void ColisionEnemigos()
 			//Colision slime y bala
 			for (int j = 0; j < MAX_BALAS; j++)
 			{
-				if (Colicion(slime[i].posX, slime[i].posY, TAMANHO, TAMANHO, bala[j].posX, bala[j].posY, TAMANHO / 4, TAMANHO / 4))
+				if (Colicion(slime[i].posX, slime[i].posY, TAMANHO, TAMANHO, personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO / 4, TAMANHO / 4))
 				{
-					if(bala[j].activa != 0)
+					if(personaje.bala[j].activa != 0)
 					{
-						slime[i].vida -= bala[j].danho;
-						bala[j].activa = 0;
+						slime[i].vida -= personaje.bala[j].danho;
+						personaje.bala[j].activa = 0;
 						printf("Vida de slime: %d", slime[i].vida);
 					}
 
@@ -1113,6 +1144,7 @@ void ColisionEnemigos()
 					{
 						slime[i].activa = 0;
 						personaje.cantidadMonedas ++;
+						personaje.puntaje = personaje.puntaje + 10;
 
 						if (cantidadMuertos < 1000)
 						{
@@ -1143,64 +1175,50 @@ void CambioDeHabitaciones()
 {
 	FILE *archivoHabitacion = NULL;
 	
-	if (personaje.posX < 0)
+	if (personaje.traspasoPuerta == 4)
 	{
 		if (mapa[actualMapaY][actualMapaX - 1] != NULL)
 		{
 			actualMapaX --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'E');
+		}
 
-			personaje.posX = LARGO_PANTALLA - TAMANHO;
-		}
-		else
-		{
-			personaje.posX = 0;
-		}
+		personaje.traspasoPuerta = 0;
 	}
 
-	if (personaje.posX > LARGO_PANTALLA - TAMANHO)
+	if (personaje.traspasoPuerta == 2)
 	{
 		if (mapa[actualMapaY][actualMapaX + 1] != NULL)
 		{
 			actualMapaX ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
-
-			personaje.posX = TAMANHO;
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'O');
 		}
-		else
-		{
-			personaje.posX = LARGO_PANTALLA - TAMANHO;
-		}
+		
+		personaje.traspasoPuerta = 0;
 	}
 
-	if (personaje.posY > ANCHO_PANTALLA - TAMANHO)
+	if (personaje.traspasoPuerta == 3)
 	{
 		if (mapa[actualMapaY + 1][actualMapaX] != NULL)
 		{
 			actualMapaY ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N');
 
-			personaje.posY = TAMANHO;
 		}
-		else
-		{
-			personaje.posY = ANCHO_PANTALLA - TAMANHO;
-		}
+		
+		personaje.traspasoPuerta = 0;
 	}
 	
-	if (personaje.posY < 0)
+	if (personaje.traspasoPuerta == 1)
 	{
 		if (mapa[actualMapaY - 1][actualMapaX] != NULL)
 		{
 			actualMapaY --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S');
 
-			personaje.posY = ANCHO_PANTALLA - TAMANHO;
 		}
-		else
-		{
-			personaje.posY = 0;
-		}
+		
+		personaje.traspasoPuerta = 0;
 	}
 }
 
@@ -1213,4 +1231,35 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego)
 
 	////////////////////////////////////////////////
 	al_flip_display();
+}
+
+void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje)
+{
+	//Centro del personaje
+	int columna = (personaje->posX + (TAMANHO / 2)) / TAMANHO;
+	int fila = (personaje->posY + (TAMANHO / 2)) / TAMANHO;
+
+	//Validamos que no nos salimos del arreglo
+	if(fila >= 0 && fila < FILAS_HABITACION && columna >= 0 && columna < COLUMNAS_HABITACION)
+	{
+		if(mapa[fila][columna] == 'N')
+		{
+			personaje->traspasoPuerta = 1;
+		}
+
+		if(mapa[fila][columna] == 'S')
+		{
+			personaje->traspasoPuerta = 3;
+		}
+
+		if(mapa[fila][columna] == 'E')
+		{
+			personaje->traspasoPuerta = 2;
+		}
+
+		if(mapa[fila][columna] == 'O')
+		{
+			personaje->traspasoPuerta = 4;
+		}
+	}
 }
