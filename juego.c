@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <allegro5/allegro.h> 
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
@@ -6,8 +8,8 @@
 #include <allegro5/allegro_ttf.h>
 #define FILAS_HABITACION 17
 #define COLUMNAS_HABITACION 30
-#define FILAS_MAPA 5
-#define COLUMNAS_MAPA 5
+#define FILAS_MAPA 7
+#define COLUMNAS_MAPA 7
 #define TAMANHO 64
 #define LARGO_TEXTO 30
 #define LARGO_SPRITES 30
@@ -26,7 +28,6 @@
 //Enemigo estatico que dispare patrones.
 
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-//Cambiar metodo de cambio entre habitaciones por puertas
 //aleatorizar la generacion de habitaciones
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
@@ -143,8 +144,8 @@ char sala[FILAS_HABITACION][COLUMNAS_HABITACION];
 char *mapa[FILAS_MAPA][COLUMNAS_MAPA];
 
 //Control de ubicacion de mapa
-int actualMapaX = 3;
-int actualMapaY = 3;
+int actualMapaX = COLUMNAS_MAPA / 2 + 1;
+int actualMapaY = FILAS_MAPA / 2 + 1;
 
 //Cuando JUEGO = 0, el while termina y se cierra el programa
 int JUEGO = 1;
@@ -177,6 +178,7 @@ void CambioDeHabitaciones();
 void RenderMenu(ALLEGRO_FONT *fuenteJuego);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
+void GeneraciónDelMapa();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -190,7 +192,6 @@ int main(int argc, char **argv)
 	/////////////////////////////////////////////////////////////// Declaraciones de una vez
 	FILE *archivoMapas = NULL;
 	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
-	char nombreHabitacion2[LARGO_TEXTO] = "mapaTest2.txt";
 
 	//Crear ventana
     ALLEGRO_DISPLAY *ventana;
@@ -210,6 +211,10 @@ int main(int argc, char **argv)
 	InitAllegro();
 	
 	InitGameComponents(ventana, &mouse);
+
+	srand(time(NULL));
+
+	GeneraciónDelMapa();
 
 	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
@@ -398,7 +403,6 @@ void Disparo()
 
 void PersonajeInvulnerable()
 {
-
 	if (personaje.invulnerable > 0)
 	{
 		personaje.invulnerable ++;
@@ -776,12 +780,6 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 			mapa[i][j] = NULL;
 		}
 	}
-
-	mapa[3][3] = "habBase.txt";
-	mapa[3][2] = "mapaTest2.txt";
-	mapa[4][3] = "mapaSurTest.txt";
-	mapa[2][3] = "mapaNorteTest.txt";
-	mapa[3][4] = "mapaEsteTest.txt";
 }
 
 void InputHandle()
@@ -1185,6 +1183,19 @@ void CambioDeHabitaciones()
 
 		personaje.traspasoPuerta = 0;
 	}
+	else if (mapa[actualMapaY][actualMapaX - 1] == NULL) //Las puertas que esten conectadas a una parte nula de mapa se reemplazan por #
+	{
+		for (int i = 0; i < FILAS_HABITACION; i++)
+		{
+			for (int j = 0; j < COLUMNAS_HABITACION; j++)
+			{
+				if (sala[i][j] == 'O')
+				{
+					sala[i][j] = '#';
+				}
+			}
+		}
+	}
 
 	if (personaje.traspasoPuerta == 2)
 	{
@@ -1195,6 +1206,19 @@ void CambioDeHabitaciones()
 		}
 		
 		personaje.traspasoPuerta = 0;
+	}
+	else if (mapa[actualMapaY][actualMapaX + 1] == NULL)
+	{
+		for (int i = 0; i < FILAS_HABITACION; i++)
+		{
+			for (int j = 0; j < COLUMNAS_HABITACION; j++)
+			{
+				if (sala[i][j] == 'E')
+				{
+					sala[i][j] = '#';
+				}
+			}
+		}
 	}
 
 	if (personaje.traspasoPuerta == 3)
@@ -1208,6 +1232,19 @@ void CambioDeHabitaciones()
 		
 		personaje.traspasoPuerta = 0;
 	}
+	else if (mapa[actualMapaY + 1][actualMapaX] == NULL)
+	{
+		for (int i = 0; i < FILAS_HABITACION; i++)
+		{
+			for (int j = 0; j < COLUMNAS_HABITACION; j++)
+			{
+				if (sala[i][j] == 'S')
+				{
+					sala[i][j] = '#';
+				}
+			}
+		}
+	}
 	
 	if (personaje.traspasoPuerta == 1)
 	{
@@ -1220,6 +1257,21 @@ void CambioDeHabitaciones()
 		
 		personaje.traspasoPuerta = 0;
 	}
+	else if (mapa[actualMapaY - 1][actualMapaX] == NULL)
+	{
+		for (int i = 0; i < FILAS_HABITACION; i++)
+		{
+			for (int j = 0; j < COLUMNAS_HABITACION; j++)
+			{
+				if (sala[i][j] == 'N')
+				{
+					sala[i][j] = '#';
+				}
+			}
+		}
+	}
+
+
 }
 
 void RenderMenu(ALLEGRO_FONT *fuenteJuego)
@@ -1260,6 +1312,101 @@ void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], 
 		if(mapa[fila][columna] == 'O')
 		{
 			personaje->traspasoPuerta = 4;
+		}
+	}
+}
+
+void GeneraciónDelMapa()
+{
+	int cantidadHabitacionesDeseadas = 6;
+	int habitacionCardinal = 0;
+	int a = 0;
+	int filaActual = FILAS_MAPA / 2 + 1;
+	int columnaActual = COLUMNAS_MAPA / 2 + 1;
+	int terminoProceso = 0;
+
+	//La habitacion central siempre será la misma
+	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
+
+	
+	while (a < cantidadHabitacionesDeseadas)
+	{
+		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
+
+		if (habitacionCardinal == 1)
+		{
+			if (mapa[filaActual - 1][columnaActual] == NULL)
+			{
+				filaActual --;
+				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+
+				filaActual = FILAS_MAPA / 2 + 1;
+				columnaActual = COLUMNAS_MAPA / 2 + 1;
+				a ++;
+
+				printf("Habitacion 1 generada");
+			}
+			else
+			{
+				filaActual --;
+			}	
+		}
+
+		if (habitacionCardinal == 3)
+		{
+			if (mapa[filaActual + 1][columnaActual] == NULL)
+			{
+				filaActual ++;
+				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+
+				filaActual = FILAS_MAPA / 2 + 1;
+				columnaActual = COLUMNAS_MAPA / 2 + 1;
+				a ++;
+
+				printf("Habitacion 3 generada");
+			}
+			else
+			{
+				filaActual ++;
+			}	
+		}
+
+		if (habitacionCardinal == 2)
+		{
+			if (mapa[filaActual][columnaActual + 1] == NULL)
+			{
+				columnaActual ++;
+				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+
+				filaActual = FILAS_MAPA / 2 + 1;
+				columnaActual = COLUMNAS_MAPA / 2 + 1;
+				a ++;
+
+				printf("Habitacion 2 generada");
+			}
+			else
+			{
+				columnaActual ++;
+			}	
+		}
+
+		if (habitacionCardinal == 4)
+		{
+			if (mapa[filaActual][columnaActual - 1] == NULL)
+			{
+				columnaActual --;
+				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+
+				filaActual = FILAS_MAPA / 2 + 1;
+				columnaActual = COLUMNAS_MAPA / 2 + 1;
+				a ++;
+
+				printf("Habitacion 4 generada");
+			}
+			else
+			{
+				columnaActual --;
+			}	
 		}
 	}
 }
