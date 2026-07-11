@@ -27,8 +27,10 @@
 //Menu funcional
 //Enemigo estatico que dispare patrones.
 
+//Jefe 2 modos de ataque, triple tiro y perseguimiento, ambos intercalados
+
+//Cerrar las puertas al entrar a una habitacion
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-//aleatorizar la generacion de habitaciones
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -55,9 +57,15 @@ struct dirBala_
 
 //Control de balas
 int balaActual = 0;
+int balaActualEnemigo = 0;
 
 //cadencia de disparo
 int cadencia = 0;
+int cadenciaEnemigo = 0;
+
+//Se guarda la direccion de la bala en base al mouse
+float direccionBala = 0.0;
+float direccionBalaEnemigo = 0.0; 
 
 typedef	struct 
 {
@@ -114,9 +122,12 @@ typedef struct
 	int vida;
 	int posXGeneracion;
 	int posYGeneracion;
+	bala_ bala[MAX_BALAS];
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
+
+enemigo Jefe;
 
 int slimeActual = 0;
 
@@ -125,6 +136,8 @@ typedef struct
 	char registroMapa[LARGO_TEXTO];
 	int fila;
 	int columna;
+	int mapaX;
+	int mapaY;
 } registroMuertes_;
 
 registroMuertes_ registroMuertes[1000];
@@ -154,13 +167,10 @@ int MENU = 0;
 //Control de sprites del personaje
 int controlSprites = 0;
 
-//Se guarda la direccion de la bala en base al mouse
-float direccionBala = 0.0;
-
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
 void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador);
 void MovimientoJugador();
@@ -179,6 +189,7 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneraciónDelMapa();
+void DisparoEnemigos();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -227,7 +238,7 @@ int main(int argc, char **argv)
 		al_rest(0.016);
 	}
 
-	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@');
+	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
 
 	spriteSheet = al_load_bitmap("64x64.png");
 
@@ -276,7 +287,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	//Axis del mouse
 	al_get_mouse_num_axes();
 
-	//Cambiar por una pantalla de PERDISTE
+	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
 	{
 		JUEGO = 0;
@@ -401,6 +412,49 @@ void Disparo()
 	}
 }
 
+void DisparoEnemigos()
+{
+	cadenciaEnemigo ++;
+
+	if (cadenciaEnemigo > 10)
+	{
+		Jefe.bala[balaActualEnemigo].posX = Jefe.posX + (TAMANHO/2);
+		Jefe.bala[balaActualEnemigo].posY = Jefe.posY + (TAMANHO/2);
+		Jefe.bala[balaActualEnemigo].activa = 1;
+
+		direccionBalaEnemigo = atan2(personaje.posY - Jefe.posY, personaje.posX - Jefe.posX); //atan2(y2 - y1, x2 - x1)
+
+		Jefe.bala[balaActualEnemigo].anguloBalaX = cos(direccionBalaEnemigo) * Jefe.bala[balaActualEnemigo].velocidad;
+		Jefe.bala[balaActualEnemigo].anguloBalaY = sin(direccionBalaEnemigo) * Jefe.bala[balaActualEnemigo].velocidad;
+
+		balaActualEnemigo++;
+		cadenciaEnemigo = 0;
+	}
+	
+	for (int i = 0; i < MAX_BALAS; i++)
+	{
+		if (Jefe.bala[i].activa != 0)
+		{
+			Jefe.bala[i].posX += Jefe.bala[i].anguloBalaX;
+			Jefe.bala[i].posY += Jefe.bala[i].anguloBalaY;
+		}
+
+		if (ColisionMapa(sala, Jefe.bala[i].posX, Jefe.bala[i].posY) || 
+		ColisionMapa(sala, Jefe.bala[i].posX + (TAMANHO/4) - 1, Jefe.bala[i].posY) || 
+		ColisionMapa(sala, Jefe.bala[i].posX + (TAMANHO/4) - 1, Jefe.bala[i].posY + (TAMANHO/4) - 1) ||
+		ColisionMapa(sala, Jefe.bala[i].posX, Jefe.bala[i].posY + (TAMANHO/4) - 1))
+		{
+			Jefe.bala[i].activa = 0;
+		}
+	}
+
+	//Cuando el arreglo este a punto de terminar, se reinicia
+	if (balaActualEnemigo > MAX_BALAS - 1)
+	{
+		balaActualEnemigo = 0;
+	}
+}
+
 void PersonajeInvulnerable()
 {
 	if (personaje.invulnerable > 0)
@@ -466,7 +520,7 @@ void MovimientoJugador()
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino)
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY)
 {
 	int muerto = 0;
 	slimeActual = 0;
@@ -529,7 +583,6 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 			}
 			
-			
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
 			{
@@ -537,7 +590,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				{
 					muerto = 0;
 
-					if (strcmp(registroMuertes[m].registroMapa, nombreMapa) == 0 && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
 					{
 						muerto = 1;
 						break;
@@ -547,16 +600,17 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				//Si el slime no esta muerto se genera
 				if (muerto == 0)
 				{
-					if(enemigo[slimeActual].activa == 0)
+					if(slime[slimeActual].activa == 0)
 					{
 						//Generar slime en la posicion 's' del mapa
-						enemigo[slimeActual].activa = 1;
-						enemigo[slimeActual].posX = j * TAMANHO;
-						enemigo[slimeActual].posY = i * TAMANHO;
+						slime[slimeActual].activa = 1;
+						slime[slimeActual].posX = j * TAMANHO;
+						slime[slimeActual].posY = i * TAMANHO;
+						slime[slimeActual].vida = 4;
 
 						//Registrar la ubicacion original del slime
-						enemigo[slimeActual].posXGeneracion = j;
-						enemigo[slimeActual].posYGeneracion = i;
+						slime[slimeActual].posXGeneracion = j;
+						slime[slimeActual].posYGeneracion = i;
 
 						slimeActual ++;
 					}
@@ -567,6 +621,39 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				slimeActual = 0;
 			}
+
+			if (sala[i][j] == 'j')
+			{
+				for (int n = 0; n < cantidadMuertos; n++)
+				{
+					muerto = 0;
+
+					if (registroMuertes[n].mapaX == mapaX && registroMuertes[n].mapaY == mapaY && registroMuertes[n].fila == i && registroMuertes[n].columna == j)
+					{
+						muerto = 1;
+						break;
+					}
+				}
+				
+				//Si el slime no esta muerto se genera
+				if (muerto == 0)
+				{
+					if(Jefe.activa == 0)
+					{
+						//Generar slime en la posicion 's' del mapa
+						Jefe.activa = 1;
+						Jefe.posX = j * TAMANHO;
+						Jefe.posY = i * TAMANHO;
+						Jefe.vida = 20;
+
+						//Registrar la ubicacion original del slime
+						Jefe.posXGeneracion = j;
+						Jefe.posYGeneracion = i;
+					}
+				}
+
+			}
+			
     	}
 	}
 }
@@ -654,6 +741,12 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, personaje.bala[i].posX - 24, personaje.bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
 		}
+
+		if (Jefe.bala[i].activa != 0)
+		{
+			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, Jefe.bala[i].posX - 24, Jefe.bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
+		}
+		
 	}
 	
 	//Dibujo enemigos
@@ -757,6 +850,16 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].posYGeneracion = 0;
 	}
 
+	Jefe.posX = 0;
+	Jefe.posY = 0;
+	Jefe.velocidad = 3;
+	Jefe.activa = 0;
+	Jefe.tipo = 0;
+	Jefe.direccion = 0;
+	Jefe.vida = 4;
+	Jefe.posXGeneracion = 0;
+	Jefe.posYGeneracion = 0;
+
 	//Inicializando balas
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
@@ -771,6 +874,18 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		personaje.bala[i].danho = 1;
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
+
+		Jefe.bala[i].posX = 0;
+		Jefe.bala[i].posY = 0;
+		Jefe.bala[i].velocidad = 10;
+		Jefe.bala[i].activa = 0;
+		Jefe.bala[i].dirBala.abajo = 0;
+		Jefe.bala[i].dirBala.arriba = 0;
+		Jefe.bala[i].dirBala.derecha = 0;
+		Jefe.bala[i].dirBala.izquierda = 0;
+		Jefe.bala[i].danho = 1;
+		Jefe.bala[i].anguloBalaX = 0;
+		Jefe.bala[i].anguloBalaY = 0;
 	}
 
 	for (int i = 0; i < FILAS_MAPA; i++)
@@ -1061,6 +1176,26 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 			}
 		}
 	}
+
+	if (Jefe.activa != 0)
+	{
+		if (controlSprites >= 0 && controlSprites <= 10)
+		{
+			al_draw_scaled_bitmap(spriteSheet, 4 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, 0); 
+		}
+		if (controlSprites > 10 && controlSprites <= 20)
+		{
+			al_draw_scaled_bitmap(spriteSheet, 5 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, 0); 
+		}
+		if (controlSprites > 20 && controlSprites <= 30)
+		{
+			al_draw_scaled_bitmap(spriteSheet, 6 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, 0); 
+		}
+		if (controlSprites > 30 && controlSprites <= 40)
+		{
+			al_draw_scaled_bitmap(spriteSheet, 7 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, 0); 
+		}		
+	}
 }
 
 void LogicaEnemigos()
@@ -1070,6 +1205,8 @@ void LogicaEnemigos()
 	int auxYSlime = 0;
 
 	ColisionEnemigos();
+
+	DisparoEnemigos();
 
 	//Slime persiguiendo al jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1153,6 +1290,10 @@ void ColisionEnemigos()
 							registroMuertes[cantidadMuertos].fila = slime[i].posYGeneracion;
 							registroMuertes[cantidadMuertos].columna = slime[i].posXGeneracion;
 
+							//Registramos la parte del mapa donde murieron
+							registroMuertes[cantidadMuertos].mapaX = actualMapaX;
+							registroMuertes[cantidadMuertos].mapaY = actualMapaY;
+
 							cantidadMuertos ++;
 						}
 					}
@@ -1178,7 +1319,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY][actualMapaX - 1] != NULL)
 		{
 			actualMapaX --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'E');
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'E', actualMapaX, actualMapaY);
 		}
 
 		personaje.traspasoPuerta = 0;
@@ -1202,7 +1343,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY][actualMapaX + 1] != NULL)
 		{
 			actualMapaX ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'O');
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'O', actualMapaX, actualMapaY);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -1226,7 +1367,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY + 1][actualMapaX] != NULL)
 		{
 			actualMapaY ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N');
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N', actualMapaX, actualMapaY);
 
 		}
 		
@@ -1251,7 +1392,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY - 1][actualMapaX] != NULL)
 		{
 			actualMapaY --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S');
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S', actualMapaX, actualMapaY);
 
 		}
 		
@@ -1324,13 +1465,38 @@ void GeneraciónDelMapa()
 	int filaActual = FILAS_MAPA / 2 + 1;
 	int columnaActual = COLUMNAS_MAPA / 2 + 1;
 	int terminoProceso = 0;
+	char *pullHabitaciones;
+	int auxRand = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
-
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
+		auxRand = rand() % 5 + 1;
+
+		if (auxRand == 1)
+		{
+			pullHabitaciones = "hab_general_1.txt";  
+		}
+		if (auxRand == 2)
+		{
+			pullHabitaciones = "hab_general_2.txt";  
+		}
+		if (auxRand == 3)
+		{
+			pullHabitaciones = "hab_general_3.txt";  
+		}
+		if (auxRand == 4)
+		{
+			pullHabitaciones = "hab_general_4.txt";  
+		}
+		if (auxRand == 5)
+		{
+			pullHabitaciones = "hab_jefe_1.txt";
+		}
+		
+
 		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 
 		if (habitacionCardinal == 1)
@@ -1338,7 +1504,7 @@ void GeneraciónDelMapa()
 			if (mapa[filaActual - 1][columnaActual] == NULL)
 			{
 				filaActual --;
-				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+				mapa[filaActual][columnaActual] = pullHabitaciones;
 
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
@@ -1357,7 +1523,7 @@ void GeneraciónDelMapa()
 			if (mapa[filaActual + 1][columnaActual] == NULL)
 			{
 				filaActual ++;
-				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+				mapa[filaActual][columnaActual] = pullHabitaciones;
 
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
@@ -1376,7 +1542,7 @@ void GeneraciónDelMapa()
 			if (mapa[filaActual][columnaActual + 1] == NULL)
 			{
 				columnaActual ++;
-				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+				mapa[filaActual][columnaActual] = pullHabitaciones;
 
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
@@ -1395,7 +1561,7 @@ void GeneraciónDelMapa()
 			if (mapa[filaActual][columnaActual - 1] == NULL)
 			{
 				columnaActual --;
-				mapa[filaActual][columnaActual] = "hab_general_1.txt";
+				mapa[filaActual][columnaActual] = pullHabitaciones;
 
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
