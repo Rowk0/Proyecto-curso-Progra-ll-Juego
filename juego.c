@@ -15,7 +15,7 @@
 #define LARGO_SPRITES 30
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
-#define MAX_BALAS 10
+#define MAX_BALAS 20
 #define MAX_ENEMIGOS 20
 
 //Ideas deshechadas: 
@@ -25,11 +25,15 @@
 ////////////////////////////////////////////////////////////////  tareas
 
 //Menu funcional
-//Enemigo estatico que dispare patrones.
 
-//Jefe 2 modos de ataque, triple tiro y perseguimiento, ambos intercalados
+//Enemigo estatico que dispare patrones (El mago)
+//Darle interacciones
 
 //Cerrar las puertas al entrar a una habitacion
+
+//Hacer que solo haya una sala de jefe
+//Hacer un indicador antes de la sala del jefe
+
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
@@ -77,6 +81,7 @@ typedef	struct
 	struct dirBala_ dirBala;
 	float anguloBalaX;
 	float anguloBalaY;
+	float direccionBalaEnemigo;
 } bala_;
 
 struct dirJugador_
@@ -129,7 +134,11 @@ enemigo slime[MAX_ENEMIGOS];
 
 enemigo Jefe;
 
+enemigo mago[MAX_ENEMIGOS];
+
 int slimeActual = 0;
+
+int magoActual = 0;
 
 typedef struct 
 {
@@ -167,6 +176,9 @@ int MENU = 0;
 //Control de sprites del personaje
 int controlSprites = 0;
 
+//Control de movimiento del jefe
+int timerMovimientoJefe = 0;
+
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
@@ -177,7 +189,7 @@ void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
 void InputHandle();
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
@@ -190,6 +202,8 @@ void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneraciónDelMapa();
 void DisparoEnemigos();
+void LogicaJefe();
+void HandicapsMejorables();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -213,6 +227,7 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *spriteSheetCaminarCaballero;
 	ALLEGRO_BITMAP *spriteSheetIcons;
 	ALLEGRO_BITMAP *spriteSheetCrosshair;
+	ALLEGRO_BITMAP *spriteSheetBalasEnemigos;
 
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
@@ -250,6 +265,8 @@ int main(int argc, char **argv)
 
 	spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
 
+	spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
+
 	while (JUEGO)
 	{
 		//Funcion que actualiza el estado del teclado y mouse
@@ -259,7 +276,7 @@ int main(int argc, char **argv)
 		Logica(sala, &personaje);
 
 		//Dibujar aqui
-		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair);
+		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos);
 
 		//Hacer descansar el cpu
 		al_rest(0.016); 
@@ -275,6 +292,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	PersonajeInvulnerable();
 
 	Disparo();
+
+	HandicapsMejorables();
 
 	//MovimientoCamara();
 
@@ -367,7 +386,6 @@ void Disparo()
 	//Aumenta constantemente personaje.bala[i].posY/personaje.bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-
 		///////////////////////////////////////////// bala desde el mouse
 		if (personaje.bala[i].activa != 0)
 		{
@@ -414,12 +432,16 @@ void Disparo()
 
 void DisparoEnemigos()
 {
+	int aux = 0;
+
+	///////////////////////////////////////////////////////////// DISPARO JEFE
+
 	cadenciaEnemigo ++;
 
-	if (cadenciaEnemigo > 10)
+	if (cadenciaEnemigo > 20 && Jefe.activa != 0)
 	{
-		Jefe.bala[balaActualEnemigo].posX = Jefe.posX + (TAMANHO/2);
-		Jefe.bala[balaActualEnemigo].posY = Jefe.posY + (TAMANHO/2);
+		Jefe.bala[balaActualEnemigo].posX = Jefe.posX + TAMANHO;
+		Jefe.bala[balaActualEnemigo].posY = Jefe.posY + TAMANHO;
 		Jefe.bala[balaActualEnemigo].activa = 1;
 
 		direccionBalaEnemigo = atan2(personaje.posY - Jefe.posY, personaje.posX - Jefe.posX); //atan2(y2 - y1, x2 - x1)
@@ -430,7 +452,13 @@ void DisparoEnemigos()
 		balaActualEnemigo++;
 		cadenciaEnemigo = 0;
 	}
-	
+
+	//Cuando el arreglo este a punto de terminar, se reinicia
+	if (balaActualEnemigo > MAX_BALAS - 1)
+	{
+		balaActualEnemigo = 0;
+	}
+
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 		if (Jefe.bala[i].activa != 0)
@@ -448,10 +476,63 @@ void DisparoEnemigos()
 		}
 	}
 
-	//Cuando el arreglo este a punto de terminar, se reinicia
-	if (balaActualEnemigo > MAX_BALAS - 1)
+	/////////////////////////////////////////////////////////////// LOGICA MAGOS
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
-		balaActualEnemigo = 0;
+		if (cadenciaEnemigo > 20 && mago[i].activa != 0)
+		{
+			for (int j = 0; j < MAX_BALAS; j++)
+			{
+				if (mago[i].bala[j].activa == 0)
+				{
+					mago[i].bala[j].posX = mago[i].posX;
+					mago[i].bala[j].posY = mago[i].posY;
+					mago[i].bala[j].activa = 1;
+
+					mago[i].bala[j].direccionBalaEnemigo = atan2(personaje.posY - mago[i].posY, personaje.posX - mago[i].posX); //atan2(y2 - y1, x2 - x1)
+
+					mago[i].bala[j].anguloBalaX = cos(mago[i].bala[j].direccionBalaEnemigo) * mago[i].bala[j].velocidad;
+					mago[i].bala[j].anguloBalaY = sin(mago[i].bala[j].direccionBalaEnemigo) * mago[i].bala[j].velocidad;
+
+					aux = 1;
+					
+					break;
+				}
+			}
+		}	
+	}
+	
+	if (aux == 1)
+	{
+		cadenciaEnemigo = 0;
+	}
+	
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		for (int j = 0; j < MAX_BALAS; j++)
+		{
+			if (mago[i].bala[j].activa != 0)
+			{
+				mago[i].bala[j].posX += mago[i].bala[j].anguloBalaX;
+				mago[i].bala[j].posY += mago[i].bala[j].anguloBalaY;
+			}
+
+			if (ColisionMapa(sala, mago[i].bala[j].posX, mago[i].bala[j].posY) || 
+			ColisionMapa(sala, mago[i].bala[j].posX + (TAMANHO/4) - 1, mago[i].bala[j].posY) || 
+			ColisionMapa(sala, mago[i].bala[j].posX + (TAMANHO/4) - 1, mago[i].bala[j].posY + (TAMANHO/4) - 1) ||
+			ColisionMapa(sala, mago[i].bala[j].posX, mago[i].bala[j].posY + (TAMANHO/4) - 1))
+			{
+				mago[i].bala[j].activa = 0;
+			}
+
+			//Destruccion de balas en funcion de la posicion del enemigo para que el arreglo nunca se acabe
+			if (mago[i].bala[j].posX > mago[i].posX + 1000 || mago[i].bala[j].posX < mago[i].posX - 1000 || mago[i].bala[j].posY > mago[i].posY + 1000 ||mago[i].bala[j].posY < mago[i].posY - 1000)
+			{
+				mago[i].bala[j].activa = 0;
+			}
+		}
 	}
 }
 
@@ -520,6 +601,19 @@ void MovimientoJugador()
 	}
 }
 
+void HandicapsMejorables()
+{
+	int rangoBala = 350;
+
+	for (int i = 0; i < MAX_BALAS; i++)
+	{
+		if (personaje.bala[i].posX > personaje.posX + TAMANHO/2 + rangoBala || personaje.bala[i].posX < personaje.posX + TAMANHO/2 - rangoBala || personaje.bala[i].posY < personaje.posY + TAMANHO/2 - rangoBala || personaje.bala[i].posY > personaje.posY + TAMANHO/2 + rangoBala)
+		{
+			personaje.bala[i].activa = 0;
+		}	
+	}
+}
+
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY)
 {
 	int muerto = 0;
@@ -534,7 +628,10 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	for (int k = 0; k < MAX_ENEMIGOS; k++)
 	{
 		slime[k].activa = 0;
+		mago[k].activa = 0;
 	}
+
+	Jefe.activa = 0;
 
 	//Reinicio de balas
 	for (int l = 0; l < MAX_ENEMIGOS; l++)
@@ -653,7 +750,44 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				}
 
 			}
-			
+
+			//cargar magos
+			if (mapa[i][j]=='m')
+			{
+				for (int m = 0; m < cantidadMuertos; m++)
+				{
+					muerto = 0;
+
+					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					{
+						muerto = 1;
+						break;
+					}
+				}
+				
+				if (muerto == 0)
+				{
+					if(mago[magoActual].activa == 0)
+					{
+						//Generar slime en la posicion 's' del mapa
+						mago[magoActual].activa = 1;
+						mago[magoActual].posX = j * TAMANHO;
+						mago[magoActual].posY = i * TAMANHO;
+						mago[magoActual].vida = 4;
+
+						//Registrar la ubicacion original del slime
+						mago[magoActual].posXGeneracion = j;
+						mago[magoActual].posYGeneracion = i;
+
+						magoActual ++;
+					}
+				}
+			}
+
+			if (magoActual > MAX_ENEMIGOS - 1)
+			{
+				magoActual = 0;
+			}
     	}
 	}
 }
@@ -701,7 +835,7 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos)
 {
 
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -744,9 +878,16 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 		if (Jefe.bala[i].activa != 0)
 		{
-			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, Jefe.bala[i].posX - 24, Jefe.bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
+			al_draw_scaled_bitmap(spriteSheetBalasEnemigos, 2 * 16, 0 * 16, 16, 16, Jefe.bala[i].posX - 32, Jefe.bala[i].posY - 32, TAMANHO, TAMANHO, 0); 
 		}
-		
+
+		for (int j = 0; j < MAX_ENEMIGOS; j++)
+		{
+			if (mago[j].bala[i].activa != 0)
+			{
+				al_draw_scaled_bitmap(spriteSheetBalasEnemigos, 2 * 16, 0 * 16, 16, 16, mago[j].bala[i].posX, mago[j].bala[i].posY, TAMANHO, TAMANHO, 0); 
+			}		
+		}
 	}
 	
 	//Dibujo enemigos
@@ -848,15 +989,25 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].vida = 4;
 		slime[i].posXGeneracion = 0;
 		slime[i].posYGeneracion = 0;
+
+		mago[i].posX = 0;
+		mago[i].posY = 0;
+		mago[i].velocidad = 3;
+		mago[i].activa = 0;
+		mago[i].tipo = 0;
+		mago[i].direccion = 0;
+		mago[i].vida = 4;
+		mago[i].posXGeneracion = 0;
+		mago[i].posYGeneracion = 0;
 	}
 
 	Jefe.posX = 0;
 	Jefe.posY = 0;
-	Jefe.velocidad = 3;
+	Jefe.velocidad = 4;
 	Jefe.activa = 0;
 	Jefe.tipo = 0;
 	Jefe.direccion = 0;
-	Jefe.vida = 4;
+	Jefe.vida = 20;
 	Jefe.posXGeneracion = 0;
 	Jefe.posYGeneracion = 0;
 
@@ -886,6 +1037,21 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		Jefe.bala[i].danho = 1;
 		Jefe.bala[i].anguloBalaX = 0;
 		Jefe.bala[i].anguloBalaY = 0;
+
+		for (int m = 0; m < MAX_ENEMIGOS; m++)
+		{
+			mago[m].bala[i].posX = 0;
+			mago[m].bala[i].posY = 0;
+			mago[m].bala[i].velocidad = 10;
+			mago[m].bala[i].activa = 0;
+			mago[m].bala[i].dirBala.abajo = 0;
+			mago[m].bala[i].dirBala.arriba = 0;
+			mago[m].bala[i].dirBala.derecha = 0;
+			mago[m].bala[i].dirBala.izquierda = 0;
+			mago[m].bala[i].danho = 1;
+			mago[m].bala[i].anguloBalaX = 0;
+			mago[m].bala[i].anguloBalaY = 0;
+		}
 	}
 
 	for (int i = 0; i < FILAS_MAPA; i++)
@@ -1175,6 +1341,26 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 				}
 			}
 		}
+
+		if (mago[i].activa != 0)
+		{
+			if (controlSprites >= 0 && controlSprites <= 10)
+			{
+				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, mago[i].posX, mago[i].posY, 0);
+			}
+			if (controlSprites > 10 && controlSprites <= 20)
+			{
+				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, mago[i].posX, mago[i].posY, 0);
+			}
+			if (controlSprites > 20 && controlSprites <= 30)
+			{
+				al_draw_bitmap_region(spriteSheet, 6 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, mago[i].posX, mago[i].posY, 0);
+			}
+			if (controlSprites > 30 && controlSprites <= 40)
+			{
+				al_draw_bitmap_region(spriteSheet, 7 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, mago[i].posX, mago[i].posY, 0);
+			}
+		}
 	}
 
 	if (Jefe.activa != 0)
@@ -1207,6 +1393,8 @@ void LogicaEnemigos()
 	ColisionEnemigos();
 
 	DisparoEnemigos();
+
+	LogicaJefe();
 
 	//Slime persiguiendo al jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1255,6 +1443,64 @@ void LogicaEnemigos()
 			}
 		}
 	}
+}
+
+void LogicaJefe()
+{
+	int auxXJefe = 0;
+	int auxYJefe = 0;
+
+	timerMovimientoJefe ++;
+
+	if (Jefe.activa != 0 && timerMovimientoJefe < 60)
+	{
+		auxXJefe = Jefe.posX;
+		auxYJefe = Jefe.posY;
+
+		if (personaje.posY > Jefe.posY)
+		{
+			Jefe.posY += Jefe.velocidad;
+		}
+
+		if (personaje.posY < Jefe.posY)
+		{
+			Jefe.posY -= Jefe.velocidad;
+		}
+
+		if (ColisionMapa(sala, Jefe.posX, Jefe.posY) || 
+		ColisionMapa(sala, Jefe.posX + TAMANHO * 2 - 1, Jefe.posY) || 
+		ColisionMapa(sala, Jefe.posX + TAMANHO * 2 - 1, Jefe.posY + TAMANHO * 2 - 1) ||
+		ColisionMapa(sala, Jefe.posX, Jefe.posY + TAMANHO * 2 - 1))
+		{
+			Jefe.posY = auxYJefe;
+		}
+
+		if (personaje.posX < Jefe.posX)
+		{
+			Jefe.posX -= Jefe.velocidad;
+			Jefe.direccion = 2;
+		}
+
+		if (personaje.posX > Jefe.posX)
+		{
+			Jefe.posX += Jefe.velocidad;
+			Jefe.direccion = 1;
+		}
+
+		if (ColisionMapa(sala, Jefe.posX, Jefe.posY) || 
+		ColisionMapa(sala, Jefe.posX + TAMANHO * 2 - 1, Jefe.posY) || 
+		ColisionMapa(sala, Jefe.posX + TAMANHO * 2 - 1, Jefe.posY + TAMANHO * 2 - 1) ||
+		ColisionMapa(sala, Jefe.posX, Jefe.posY + TAMANHO * 2 - 1))
+		{
+			Jefe.posX = auxXJefe;
+		}
+	}
+
+	if (timerMovimientoJefe >= 120)
+	{
+		timerMovimientoJefe = 0;
+	}
+	
 }
 
 void ColisionEnemigos()
@@ -1306,6 +1552,59 @@ void ColisionEnemigos()
 				personaje.vidas --;
 				personaje.invulnerable = 1;
 			}
+		}
+	}
+
+	//Colision jefe y bala del personaje
+	if (Jefe.activa != 0)
+	{
+		for (int k = 0; k < MAX_BALAS; k++)
+		{
+			if (Colicion(Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, personaje.bala[k].posX, personaje.bala[k].posY, TAMANHO / 4, TAMANHO / 4))
+			{
+				if(personaje.bala[k].activa != 0)
+				{
+					Jefe.vida -= personaje.bala[k].danho;
+					personaje.bala[k].activa = 0;
+				}
+
+				if(Jefe.vida <= 0 && Jefe.activa == 1)
+				{
+					Jefe.activa = 0;
+					personaje.cantidadMonedas = personaje.cantidadMonedas + 10;
+					personaje.puntaje = personaje.puntaje + 100;
+
+					if (cantidadMuertos < 1000)
+					{
+						//Cuando muere un slime se registra el mapa donde murio en una posicion del arreglo
+						strcpy(registroMuertes[cantidadMuertos].registroMapa, mapa[actualMapaY][actualMapaX]);
+
+						//Se registra su lugar de aparicion original
+						registroMuertes[cantidadMuertos].fila = Jefe.posYGeneracion;
+						registroMuertes[cantidadMuertos].columna = Jefe.posXGeneracion;
+
+						//Registramos la parte del mapa donde murieron
+						registroMuertes[cantidadMuertos].mapaX = actualMapaX;
+						registroMuertes[cantidadMuertos].mapaY = actualMapaY;
+
+						cantidadMuertos ++;
+					}
+				}
+			}
+
+			//Colision jugador y balas jefe
+			if (Colicion(Jefe.bala[k].posX, Jefe.bala[k].posY, TAMANHO / 4, TAMANHO / 4, personaje.posX, personaje.posY, TAMANHO, TAMANHO) && personaje.invulnerable == 0)
+			{
+				personaje.vidas --;
+				personaje.invulnerable = 1;
+			}
+		}
+
+		//Colision jefe y jugador
+		if (Colicion(Jefe.posX, Jefe.posY, TAMANHO * 2, TAMANHO * 2, personaje.posX, personaje.posY, TAMANHO, TAMANHO) && personaje.invulnerable == 0)
+		{
+			personaje.vidas --;
+			personaje.invulnerable = 1;
 		}
 	}
 }
