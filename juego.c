@@ -24,17 +24,26 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Menu funcional
-
-//Enemigo estatico que dispare patrones (El mago)
-//Darle interacciones
-
 //Cerrar las puertas al entrar a una habitacion
-
-//Hacer que solo haya una sala de jefe
 //Hacer un indicador antes de la sala del jefe
-
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
+
+//Colicion entre slimes
+
+//Ataques de enemigos cuando te "vean" o a cierta distancia
+
+//meter llave
+
+//3 elementos estaticos más (caida monedas)
+
+//1 elemento dinamico más
+//baldi vibes
+
+//Enemigos legends of the zelda 1 inspiracion
+
+//Final:
+//rrva en mapgeneral
+//Botiquin?
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -101,7 +110,9 @@ typedef struct
 	int invulnerable;
 	int cantidadMonedas;
 	int puntaje;
-	bala_ bala[MAX_BALAS];
+	//Rango de balas
+	//Ver si poner los power ups en un arreglo
+	bala_ bala[MAX_BALAS]; //Se puede agreegar una variable cantidad de balas para limitar la municion...
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
 } jugador;
 
@@ -170,8 +181,8 @@ int actualMapaX = COLUMNAS_MAPA / 2 + 1;
 int actualMapaY = FILAS_MAPA / 2 + 1;
 
 //Cuando JUEGO = 0, el while termina y se cierra el programa
-int JUEGO = 1;
-int MENU = 0;
+int JUEGO = 0;
+int MENU = 1;
 
 //Control de sprites del personaje
 int controlSprites = 0;
@@ -200,10 +211,11 @@ void CambioDeHabitaciones();
 void RenderMenu(ALLEGRO_FONT *fuenteJuego);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
-void GeneraciónDelMapa();
+void GeneraciónDelMapa(int cantidadHabitacionesDeseadas);
 void DisparoEnemigos();
 void LogicaJefe();
 void HandicapsMejorables();
+void LogicaMenu();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -240,7 +252,7 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
-	GeneraciónDelMapa();
+	GeneraciónDelMapa(10);
 
 	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
@@ -249,6 +261,8 @@ int main(int argc, char **argv)
 		InputHandle();
 
 		RenderMenu(fuenteJuego);
+
+		LogicaMenu();
 
 		al_rest(0.016);
 	}
@@ -283,6 +297,31 @@ int main(int argc, char **argv)
 	}
 
 	return 0;
+}
+
+void LogicaMenu()
+{
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO))
+	{
+		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+		{
+			MENU = 0;
+			JUEGO = 1;
+		}
+	}
+}
+
+void RenderMenu(ALLEGRO_FONT *fuenteJuego)
+{
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	//////////////////////////////////////////////// Dibujar en este espacio
+
+	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(255, 255, 255));
+
+	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Jugar");
+
+	////////////////////////////////////////////////
+	al_flip_display();
 }
 
 void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
@@ -373,6 +412,9 @@ void Disparo()
 
 	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
 	{
+		//comprobar que queden balas para disparar
+		//hacer el recorrido del arreglo de balas, determinar cual está inactivo, para ver si usarlo
+
 		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
 		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
 		personaje.bala[balaActual].activa = 1;
@@ -628,7 +670,6 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	for (int k = 0; k < MAX_ENEMIGOS; k++)
 	{
 		slime[k].activa = 0;
-		mago[k].activa = 0;
 	}
 
 	Jefe.activa = 0;
@@ -637,8 +678,18 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	for (int l = 0; l < MAX_ENEMIGOS; l++)
 	{
 		personaje.bala[l].activa = 0;
+		Jefe.bala[l].activa = 0;
 	}
 
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		for (int j = 0; j < MAX_BALAS; j++)
+		{
+			mago[i].activa = 0;
+			mago[i].bala[j].activa = 0;
+		}
+	}
+	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
     	for (int j = 0; j < COLUMNAS_HABITACION; j++) 
@@ -976,6 +1027,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.vidas = 3;
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 0;
+	//variable total balas disponibles
 
 	//Inicializando enemigos
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1518,7 +1570,6 @@ void ColisionEnemigos()
 					{
 						slime[i].vida -= personaje.bala[j].danho;
 						personaje.bala[j].activa = 0;
-						printf("Vida de slime: %d", slime[i].vida);
 					}
 
 					if(slime[i].vida <= 0 && slime[i].activa == 1)
@@ -1555,7 +1606,70 @@ void ColisionEnemigos()
 		}
 	}
 
-	//Colision jefe y bala del personaje
+	///////////////////////////////////////////////////////////////// COlisiones con el mago y jugador
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (mago[i].activa != 0)
+		{
+			for (int j = 0; j < MAX_BALAS; j++)
+			{
+				//Colicion balas personaje y mago
+				if (Colicion(mago[i].posX, mago[i].posY, TAMANHO, TAMANHO, personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO / 4, TAMANHO / 4))
+				{
+					if(personaje.bala[j].activa != 0)
+					{
+						mago[i].vida -= personaje.bala[j].danho;
+						personaje.bala[j].activa = 0;
+					}
+
+					if(mago[i].vida <= 0 && mago[i].activa == 1)
+					{
+						mago[i].activa = 0;
+						personaje.cantidadMonedas ++;
+						personaje.puntaje = personaje.puntaje + 10;
+
+						if (cantidadMuertos < 1000)
+						{
+							//Cuando muere un slime se registra el mapa donde murio en una posicion del arreglo
+							strcpy(registroMuertes[cantidadMuertos].registroMapa, mapa[actualMapaY][actualMapaX]);
+
+							//Se registra su lugar de aparicion original
+							registroMuertes[cantidadMuertos].fila = mago[i].posYGeneracion;
+							registroMuertes[cantidadMuertos].columna = mago[i].posXGeneracion;
+
+							//Registramos la parte del mapa donde murieron
+							registroMuertes[cantidadMuertos].mapaX = actualMapaX;
+							registroMuertes[cantidadMuertos].mapaY = actualMapaY;
+
+							cantidadMuertos ++;
+						}
+					}
+				}
+
+				//Colicion balas de mago y personaje
+				if (Colicion(mago[i].bala[j].posX, mago[i].bala[j].posY, TAMANHO / 4, TAMANHO / 4, personaje.posX, personaje.posY, TAMANHO, TAMANHO))
+				{
+					if (mago[i].bala[j].activa != 0)
+					{
+						personaje.vidas --;
+						mago[i].bala[j].activa = 0;
+						personaje.invulnerable = 1;
+					}
+				}
+			}
+
+			//Colision mago y jugador
+			if (Colicion(mago[i].posX, mago[i].posY, TAMANHO, TAMANHO, personaje.posX, personaje.posY, TAMANHO, TAMANHO) && personaje.invulnerable == 0)
+			{
+				personaje.vidas --;
+				personaje.invulnerable = 1;
+			}
+		}
+	}
+	
+
+	///////////////////////////////////////////////////////////////// Colisiones con el jefe y jugador
 	if (Jefe.activa != 0)
 	{
 		for (int k = 0; k < MAX_BALAS; k++)
@@ -1714,17 +1828,6 @@ void CambioDeHabitaciones()
 
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego)
-{
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	//////////////////////////////////////////////// Dibujar en este espacio
-
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2, ANCHO_PANTALLA / 2 + 200, ALLEGRO_ALIGN_CENTRE, "Jugar");
-
-	////////////////////////////////////////////////
-	al_flip_display();
-}
-
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje)
 {
 	//Centro del personaje
@@ -1756,9 +1859,8 @@ void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], 
 	}
 }
 
-void GeneraciónDelMapa()
+void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 {
-	int cantidadHabitacionesDeseadas = 6;
 	int habitacionCardinal = 0;
 	int a = 0;
 	int filaActual = FILAS_MAPA / 2 + 1;
@@ -1772,7 +1874,7 @@ void GeneraciónDelMapa()
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 5 + 1;
+		auxRand = rand() % 4 + 1;
 
 		if (auxRand == 1)
 		{
@@ -1790,11 +1892,12 @@ void GeneraciónDelMapa()
 		{
 			pullHabitaciones = "hab_general_4.txt";  
 		}
-		if (auxRand == 5)
+
+		//Cuando este por generar la ultima habitacion, obliga a que sea la del jefe
+		if (a == cantidadHabitacionesDeseadas - 1)
 		{
 			pullHabitaciones = "hab_jefe_1.txt";
 		}
-		
 
 		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 
