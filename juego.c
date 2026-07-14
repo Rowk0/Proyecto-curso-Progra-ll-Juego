@@ -17,33 +17,34 @@
 #define ANCHO_PANTALLA 1088
 #define MAX_BALAS 20
 #define MAX_ENEMIGOS 20
+#define MAX_OBJETOS 100
 
 //Ideas deshechadas: 
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
 //Ver todas las habitaciones mientras te mueves: eso implica hacer más condicionales en enemigos, reformular cargar mapa
+//Hacer un indicador antes de la sala del jefe: está de más
 
 ////////////////////////////////////////////////////////////////  tareas
 
 //Cerrar las puertas al entrar a una habitacion
-//Hacer un indicador antes de la sala del jefe
-//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-
-//Colicion entre slimes
-
-//Ataques de enemigos cuando te "vean" o a cierta distancia
 
 //meter llave
 
-//3 elementos estaticos más (caida monedas)
+//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
+
+//2 elementos estaticos más
 
 //1 elemento dinamico más
 //baldi vibes
 
 //Enemigos legends of the zelda 1 inspiracion
 
+//Pedir ayuda:
+//Colicion entre slimes
+
 //Final:
-//rrva en mapgeneral
-//Botiquin?
+//recoger orbes y ponerlos en mapgeneral para terminar el nivel
+//arreglo de consumibles, botiquin
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -139,6 +140,9 @@ typedef struct
 	int posXGeneracion;
 	int posYGeneracion;
 	bala_ bala[MAX_BALAS];
+	int posXAnterior;
+	int posYAnterior;
+	int ataquesEnemigos;
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
@@ -163,6 +167,18 @@ typedef struct
 registroMuertes_ registroMuertes[1000];
 
 int cantidadMuertos = 0;
+
+typedef struct 
+{
+	int posX;
+	int posY;
+	int activa;
+	int especial;
+} objeto;
+
+objeto monedas[MAX_OBJETOS];
+
+int monedasActual = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -216,6 +232,8 @@ void DisparoEnemigos();
 void LogicaJefe();
 void HandicapsMejorables();
 void LogicaMenu();
+void ColicionObjetos();
+void RangoVisionEnemigo();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -340,6 +358,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 
 	VerificarTraspasoPuertas(mapa, jugador);
 
+	ColicionObjetos();
+
 	CambioDeHabitaciones();
 	
 	//Axis del mouse
@@ -350,65 +370,12 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	{
 		JUEGO = 0;
 	}
-	
 }
 
 void Disparo()
 {
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
-
-	/*if(al_key_down(&estado, ALLEGRO_KEY_UP) && cadencia > 20)
-	{	
-		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		personaje.bala[balaActual].activa = 1;
-		personaje.bala[balaActual].dirBala.arriba = 1;
-		personaje.bala[balaActual].dirBala.abajo = 0;
-		personaje.bala[balaActual].dirBala.derecha = 0;
-		personaje.bala[balaActual].dirBala.izquierda= 0;
-		balaActual++;
-		cadencia = 0;
-	}
-
-	if(al_key_down(&estado, ALLEGRO_KEY_DOWN) && cadencia > 20)
-	{	
-		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		personaje.bala[balaActual].activa = 1;
-		personaje.bala[balaActual].dirBala.arriba = 0;
-		personaje.bala[balaActual].dirBala.abajo = 1;
-		personaje.bala[balaActual].dirBala.derecha = 0;
-		personaje.bala[balaActual].dirBala.izquierda= 0;
-		balaActual++;
-		cadencia = 0;
-	}
-
-	if(al_key_down(&estado, ALLEGRO_KEY_RIGHT) && cadencia > 20)
-	{	
-		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		personaje.bala[balaActual].activa = 1;
-		personaje.bala[balaActual].dirBala.arriba = 0;
-		personaje.bala[balaActual].dirBala.abajo = 0;
-		personaje.bala[balaActual].dirBala.derecha = 1;
-		personaje.bala[balaActual].dirBala.izquierda= 0;
-		balaActual++;
-		cadencia = 0;
-	}
-
-	if(al_key_down(&estado, ALLEGRO_KEY_LEFT) && cadencia > 20)
-	{	
-		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		personaje.bala[balaActual].activa = 1;
-		personaje.bala[balaActual].dirBala.arriba = 0;
-		personaje.bala[balaActual].dirBala.abajo = 0;
-		personaje.bala[balaActual].dirBala.derecha = 0;
-		personaje.bala[balaActual].dirBala.izquierda= 1;
-		balaActual++;
-		cadencia = 0;
-	}*/
 
 	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
 	{
@@ -428,33 +395,11 @@ void Disparo()
 	//Aumenta constantemente personaje.bala[i].posY/personaje.bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		///////////////////////////////////////////// bala desde el mouse
 		if (personaje.bala[i].activa != 0)
 		{
 			personaje.bala[i].posX += personaje.bala[i].anguloBalaX;
 			personaje.bala[i].posY += personaje.bala[i].anguloBalaY;
 		}
-		//////////////////////////////////////////// bala desde el teclado
-
-		/*if (personaje.bala[i].dirBala.arriba != 0)
-		{
-			personaje.bala[i].posY -= personaje.bala[i].velocidad;
-		}
-
-		if (personaje.bala[i].dirBala.abajo != 0)
-		{
-			personaje.bala[i].posY += personaje.bala[i].velocidad;
-		}
-
-		if (personaje.bala[i].dirBala.derecha != 0)
-		{
-			personaje.bala[i].posX += personaje.bala[i].velocidad;
-		}
-
-		if (personaje.bala[i].dirBala.izquierda != 0)
-		{
-			personaje.bala[i].posX -= personaje.bala[i].velocidad;
-		}*/
 
 		if (ColisionMapa(sala, personaje.bala[i].posX, personaje.bala[i].posY) || 
 		ColisionMapa(sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY) || 
@@ -522,7 +467,7 @@ void DisparoEnemigos()
 
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
-		if (cadenciaEnemigo > 20 && mago[i].activa != 0)
+		if (cadenciaEnemigo > 20 && mago[i].activa != 0 && mago[i].ataquesEnemigos == 1)
 		{
 			for (int j = 0; j < MAX_BALAS; j++)
 			{
@@ -670,6 +615,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	for (int k = 0; k < MAX_ENEMIGOS; k++)
 	{
 		slime[k].activa = 0;
+		slime[k].ataquesEnemigos = 0;
 	}
 
 	Jefe.activa = 0;
@@ -687,7 +633,14 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		{
 			mago[i].activa = 0;
 			mago[i].bala[j].activa = 0;
+			mago[i].ataquesEnemigos = 0;
 		}
+	}
+
+	//Reinicio objetos
+	for (int i = 0; i < MAX_OBJETOS; i++)
+	{
+		monedas[i].activa = 0;
 	}
 	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
@@ -915,9 +868,6 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	{
 		if (personaje.bala[i].activa != 0)
 		{
-			//Bala circular
-			//al_draw_filled_circle(personaje.bala[i].posX, personaje.bala[i].posY, 8, al_map_rgb(0, 255, 255));
-
 			//Bala cuadrada
 			//al_draw_filled_rectangle(personaje.bala[i].posX, personaje.bala[i].posY, personaje.bala[i].posX + (TAMANHO / 4), personaje.bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
 
@@ -938,6 +888,18 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 			{
 				al_draw_scaled_bitmap(spriteSheetBalasEnemigos, 2 * 16, 0 * 16, 16, 16, mago[j].bala[i].posX, mago[j].bala[i].posY, TAMANHO, TAMANHO, 0); 
 			}		
+		}
+
+		for (int i = 0; i < MAX_OBJETOS; i++)
+		{
+			if (monedas[i].activa != 0 && monedas[i].especial != 0)
+			{
+				al_draw_bitmap_region(spriteSheetIcons, 2 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
+			}
+			else if (monedas[i].activa != 0)
+			{
+				al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
+			}	
 		}
 	}
 	
@@ -1037,10 +999,11 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		slime[i].velocidad = 3;
 		slime[i].activa = 0;
 		slime[i].tipo = 0;
-		slime[i].direccion = 0;
+		slime[i].direccion = 1;
 		slime[i].vida = 4;
 		slime[i].posXGeneracion = 0;
 		slime[i].posYGeneracion = 0;
+		slime[i].ataquesEnemigos = 0;
 
 		mago[i].posX = 0;
 		mago[i].posY = 0;
@@ -1051,6 +1014,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		mago[i].vida = 4;
 		mago[i].posXGeneracion = 0;
 		mago[i].posYGeneracion = 0;
+		mago[i].ataquesEnemigos = 0;
 	}
 
 	Jefe.posX = 0;
@@ -1062,6 +1026,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	Jefe.vida = 20;
 	Jefe.posXGeneracion = 0;
 	Jefe.posYGeneracion = 0;
+	Jefe.ataquesEnemigos = 0;
 
 	//Inicializando balas
 	for (int i = 0; i < MAX_BALAS; i++)
@@ -1074,7 +1039,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		personaje.bala[i].dirBala.arriba = 0;
 		personaje.bala[i].dirBala.derecha = 0;
 		personaje.bala[i].dirBala.izquierda = 0;
-		personaje.bala[i].danho = 1;
+		personaje.bala[i].danho = 10;                         ///// originalmente 1
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 
@@ -1103,6 +1068,14 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 			mago[m].bala[i].danho = 1;
 			mago[m].bala[i].anguloBalaX = 0;
 			mago[m].bala[i].anguloBalaY = 0;
+		}
+
+		for (int i = 0; i < MAX_OBJETOS; i++)
+		{
+			monedas[i].posX = 0;
+			monedas[i].posY = 0;
+			monedas[i].activa = 0;
+			monedas[i].especial = 0;
 		}
 	}
 
@@ -1442,16 +1415,10 @@ void LogicaEnemigos()
 	int auxXSlime = 0;
 	int auxYSlime = 0;
 
-	ColisionEnemigos();
-
-	DisparoEnemigos();
-
-	LogicaJefe();
-
 	//Slime persiguiendo al jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{		
-		if (slime[i].activa != 0)
+		if (slime[i].activa != 0 && slime[i].ataquesEnemigos == 1)
 		{
 			auxXSlime = slime[i].posX;
 			auxYSlime = slime[i].posY;
@@ -1493,6 +1460,34 @@ void LogicaEnemigos()
 			{
 				slime[i].posX = auxXSlime;
 			}
+		}
+	}
+
+	ColisionEnemigos();
+
+	DisparoEnemigos();
+
+	LogicaJefe();
+
+	RangoVisionEnemigo();
+}
+
+void RangoVisionEnemigo()
+{
+	int rangoVision = 12 * TAMANHO;
+
+	int offSet = (rangoVision - TAMANHO) / 2;
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, slime[i].posX - offSet, slime[i].posY - offSet, rangoVision, rangoVision))
+		{
+			slime[i].ataquesEnemigos = 1;
+		}
+
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mago[i].posX - offSet, mago[i].posY - offSet, rangoVision, rangoVision))
+		{
+			mago[i].ataquesEnemigos = 1;
 		}
 	}
 }
@@ -1557,6 +1552,7 @@ void LogicaJefe()
 
 void ColisionEnemigos()
 {
+	/////////////////////////////////////////////////////////////////////// Colisiones slimes y jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
 		if (slime[i].activa != 0)
@@ -1575,8 +1571,14 @@ void ColisionEnemigos()
 					if(slime[i].vida <= 0 && slime[i].activa == 1)
 					{
 						slime[i].activa = 0;
-						personaje.cantidadMonedas ++;
 						personaje.puntaje = personaje.puntaje + 10;
+
+						// Aparicion monedas al morir un enemigo
+						monedas[monedasActual].posX = slime[i].posX;
+						monedas[monedasActual].posY = slime[i].posY;
+						monedas[monedasActual].activa = 1;
+						monedasActual ++;
+
 
 						if (cantidadMuertos < 1000)
 						{
@@ -1603,6 +1605,50 @@ void ColisionEnemigos()
 				personaje.vidas --;
 				personaje.invulnerable = 1;
 			}
+
+			//Colision entre slimes
+			slime[i].posXAnterior = slime[i].posX;
+			slime[i].posYAnterior = slime[i].posY;
+
+			for (int k = 0; k < MAX_ENEMIGOS; k++)
+			{
+				if (slime[k].activa != 0)
+				{
+					for (int l = k + 1; l < MAX_ENEMIGOS; l++)
+					{
+						if (slime[l].activa != 0)
+						{
+							if (Colicion(slime[k].posX, slime[k].posY, TAMANHO, TAMANHO, slime[l].posX, slime[l].posY, TAMANHO, TAMANHO))
+							{
+								/*slime[k].posX = slime[k].posXAnterior;
+								slime[k].posY = slime[k].posYAnterior;
+
+								slime[l].posX = slime[l].posXAnterior;
+								slime[l].posY = slime[l].posYAnterior;*/
+
+								/*if (slime[k].posX > slime[l].posX)
+								{
+									slime[l].posX -= slime[l].velocidad;
+								}
+								else if (slime[k].posX < slime[l].posX)
+								{
+									slime[l].posX += slime[l].velocidad;
+								}
+
+								if (slime[k].posY > slime[l].posY)
+								{
+									slime[l].posY -= slime[l].velocidad;
+								}
+								else if (slime[k].posY < slime[l].posY)
+								{
+									slime[l].posY += slime[l].velocidad;
+								}*/
+								
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -1626,8 +1672,12 @@ void ColisionEnemigos()
 					if(mago[i].vida <= 0 && mago[i].activa == 1)
 					{
 						mago[i].activa = 0;
-						personaje.cantidadMonedas ++;
 						personaje.puntaje = personaje.puntaje + 10;
+
+						monedas[monedasActual].posX = mago[i].posX;
+						monedas[monedasActual].posY = mago[i].posY;
+						monedas[monedasActual].activa = 1;
+						monedasActual ++;
 
 						if (cantidadMuertos < 1000)
 						{
@@ -1648,7 +1698,7 @@ void ColisionEnemigos()
 				}
 
 				//Colicion balas de mago y personaje
-				if (Colicion(mago[i].bala[j].posX, mago[i].bala[j].posY, TAMANHO / 4, TAMANHO / 4, personaje.posX, personaje.posY, TAMANHO, TAMANHO))
+				if (Colicion(mago[i].bala[j].posX, mago[i].bala[j].posY, TAMANHO / 4, TAMANHO / 4, personaje.posX, personaje.posY, TAMANHO, TAMANHO) && personaje.invulnerable == 0)
 				{
 					if (mago[i].bala[j].activa != 0)
 					{
@@ -1685,8 +1735,13 @@ void ColisionEnemigos()
 				if(Jefe.vida <= 0 && Jefe.activa == 1)
 				{
 					Jefe.activa = 0;
-					personaje.cantidadMonedas = personaje.cantidadMonedas + 10;
 					personaje.puntaje = personaje.puntaje + 100;
+
+					monedas[monedasActual].posX = Jefe.posX;
+					monedas[monedasActual].posY = Jefe.posY;
+					monedas[monedasActual].especial = 1;
+					monedas[monedasActual].activa = 1;
+					monedasActual ++;
 
 					if (cantidadMuertos < 1000)
 					{
@@ -1719,6 +1774,29 @@ void ColisionEnemigos()
 		{
 			personaje.vidas --;
 			personaje.invulnerable = 1;
+		}
+	}
+}
+
+void ColicionObjetos()
+{
+	for (int i = 0; i < MAX_OBJETOS; i++)
+	{
+		if (monedas[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, TAMANHO, TAMANHO))
+			{
+				if (monedas[i].especial != 0)
+				{
+					monedas[i].activa = 0;
+					personaje.cantidadMonedas += 10;
+				}
+				else
+				{
+					monedas[i].activa = 0;
+					personaje.cantidadMonedas ++;
+				}
+			}
 		}
 	}
 }
