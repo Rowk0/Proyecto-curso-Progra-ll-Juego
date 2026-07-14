@@ -15,7 +15,7 @@
 #define LARGO_SPRITES 30
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
-#define MAX_BALAS 20
+#define MAX_BALAS 21
 #define MAX_ENEMIGOS 20
 #define MAX_OBJETOS 100
 
@@ -23,28 +23,27 @@
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
 //Ver todas las habitaciones mientras te mueves: eso implica hacer más condicionales en enemigos, reformular cargar mapa
 //Hacer un indicador antes de la sala del jefe: está de más
+//Cerrar las puertas al entrar a una habitacion: Con el sistema de balasdisponibles, si no tuvieras balas en una habitacion cerrada pierdes instantaneamente
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Cerrar las puertas al entrar a una habitacion
-
-//meter llave
-
-//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-
-//2 elementos estaticos más
+//Interrogatorio:
+//1 elementos estaticos más
+//botiquin?
+//vida
+//trampas?
 
 //1 elemento dinamico más
-//baldi vibes
+//enemigo con baldi vibes
 
-//Enemigos legends of the zelda 1 inspiracion
+//Mis ideas:
+//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
 
 //Pedir ayuda:
 //Colicion entre slimes
 
 //Final:
 //recoger orbes y ponerlos en mapgeneral para terminar el nivel
-//arreglo de consumibles, botiquin
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -110,10 +109,12 @@ typedef struct
 	int vidas;
 	int invulnerable;
 	int cantidadMonedas;
+	int cantidadLlaves;
 	int puntaje;
 	//Rango de balas
 	//Ver si poner los power ups en un arreglo
-	bala_ bala[MAX_BALAS]; //Se puede agreegar una variable cantidad de balas para limitar la municion...
+	bala_ bala[MAX_BALAS]; //Se puede agregar una variable cantidad de balas para limitar la municion...
+	int balasDisponibles;
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
 } jugador;
 
@@ -170,6 +171,17 @@ int cantidadMuertos = 0;
 
 typedef struct 
 {
+	int mapaX;
+	int mapaY;
+	int seObtuvoUnaRecompensa;
+} registroRecompensas_;
+
+registroRecompensas_ registroRecompensas[1000];
+
+int cantidadRecompensas = 0;
+
+typedef struct 
+{
 	int posX;
 	int posY;
 	int activa;
@@ -178,7 +190,12 @@ typedef struct
 
 objeto monedas[MAX_OBJETOS];
 
+objeto llaves[MAX_OBJETOS];
+
+//Meter una cartucho de recarga de tipo objeto
+
 int monedasActual = 0;
+int llavesActual = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -205,6 +222,11 @@ int controlSprites = 0;
 
 //Control de movimiento del jefe
 int timerMovimientoJefe = 0;
+
+//Variable que permite saber si la sala actual esta vacia
+int salaVacia = 0;
+
+int seGeneroUnaRecompensa = 0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
@@ -234,6 +256,8 @@ void HandicapsMejorables();
 void LogicaMenu();
 void ColicionObjetos();
 void RangoVisionEnemigo();
+void VerificarSalaVacia();
+void GeneracionDeRecompensas();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -361,6 +385,10 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	ColicionObjetos();
 
 	CambioDeHabitaciones();
+
+	VerificarSalaVacia();
+
+	GeneracionDeRecompensas();
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -377,7 +405,7 @@ void Disparo()
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
 
-	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
+	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && balaActual != 20)
 	{
 		//comprobar que queden balas para disparar
 		//hacer el recorrido del arreglo de balas, determinar cual está inactivo, para ver si usarlo
@@ -411,10 +439,10 @@ void Disparo()
 	}
 
 	//Cuando el arreglo este a punto de terminar, se reinicia
-	if (balaActual > MAX_BALAS - 1)
+	/*if (balaActual > MAX_BALAS - 1)
 	{
 		balaActual = 0;
-	}
+	}*/
 }
 
 void DisparoEnemigos()
@@ -605,6 +633,8 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 {
 	int muerto = 0;
 	slimeActual = 0;
+	salaVacia = 0;
+	seGeneroUnaRecompensa = 0;
 
 	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
 	{
@@ -655,6 +685,26 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				jugador->posX = j * TAMANHO;
 				jugador->posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='*')
+			{
+				for (int k = 0; k < MAX_OBJETOS; k++)
+				{
+					monedas[k].posX = j * TAMANHO;
+					monedas[k].posY = i * TAMANHO;
+
+					llaves[k].posX = j * TAMANHO;
+					llaves[k].posY = i * TAMANHO;
+
+					for (int i = 0; i < 1000; i++)
+					{
+						if (registroRecompensas[i].mapaX == mapaX && registroRecompensas[i].mapaY == mapaY && registroRecompensas[i].seObtuvoUnaRecompensa != seGeneroUnaRecompensa)
+						{
+							seGeneroUnaRecompensa ++;
+						}
+					}
+				}
 			}
 
 			if (mapa[i][j] == puertaDestino)
@@ -854,6 +904,14 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, TAMANHO, TAMANHO + TAMANHO / 2, 0);
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO + 80, TAMANHO + 50, 0, "= %d", personaje.cantidadMonedas);
 
+	//Llaves jugador
+	al_draw_bitmap_region(spriteSheetIcons, 6 * TAMANHO, 4 * TAMANHO, TAMANHO, TAMANHO, TAMANHO, TAMANHO + TAMANHO + 32, 0);
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO + 80, TAMANHO + 120, 0, "= %d", personaje.cantidadLlaves);
+
+	//Balas Jugador
+	al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, LARGO_PANTALLA - 350, ANCHO_PANTALLA - 200, TAMANHO * 3, TAMANHO * 3, 0); 
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", balaActual, MAX_BALAS - 1);
+
 	//Puntaje Jugador
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 23, TAMANHO, 0, "Puntaje: %d", personaje.puntaje);
 
@@ -889,18 +947,26 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 				al_draw_scaled_bitmap(spriteSheetBalasEnemigos, 2 * 16, 0 * 16, 16, 16, mago[j].bala[i].posX, mago[j].bala[i].posY, TAMANHO, TAMANHO, 0); 
 			}		
 		}
+	}
 
-		for (int i = 0; i < MAX_OBJETOS; i++)
+	//Dibujo de objetos
+	for (int i = 0; i < MAX_OBJETOS; i++)
+	{
+		//llaves
+		if (llaves[i].activa != 0)
 		{
-			if (monedas[i].activa != 0 && monedas[i].especial != 0)
-			{
-				al_draw_bitmap_region(spriteSheetIcons, 2 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
-			}
-			else if (monedas[i].activa != 0)
-			{
-				al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
-			}	
+			al_draw_bitmap_region(spriteSheetIcons, 6 * TAMANHO, 4 * TAMANHO, TAMANHO, TAMANHO, llaves[i].posX, llaves[i].posY, 0);
 		}
+
+		//monedas
+		if (monedas[i].activa != 0 && monedas[i].especial != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 2 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
+		}
+		else if (monedas[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
+		}	
 	}
 	
 	//Dibujo enemigos
@@ -989,6 +1055,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.vidas = 3;
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 0;
+	personaje.cantidadLlaves = 0;
 	//variable total balas disponibles
 
 	//Inicializando enemigos
@@ -1039,7 +1106,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		personaje.bala[i].dirBala.arriba = 0;
 		personaje.bala[i].dirBala.derecha = 0;
 		personaje.bala[i].dirBala.izquierda = 0;
-		personaje.bala[i].danho = 10;                         ///// originalmente 1
+		personaje.bala[i].danho = 10;               ///// originalmente 1
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 
@@ -1798,7 +1865,69 @@ void ColicionObjetos()
 				}
 			}
 		}
+
+		if (llaves[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, llaves[i].posX, llaves[i].posY, TAMANHO, TAMANHO))
+			{
+				llaves[i].activa = 0;
+				personaje.cantidadLlaves ++;
+			}
+		}
 	}
+}
+
+void GeneracionDeRecompensas()
+{
+	if (salaVacia == 1 && seGeneroUnaRecompensa == 0 && !(actualMapaX == COLUMNAS_MAPA / 2 + 1 && actualMapaY == FILAS_MAPA / 2 + 1))
+	{
+		seGeneroUnaRecompensa = 1;
+
+		registroRecompensas[cantidadRecompensas].mapaX = actualMapaX;
+		registroRecompensas[cantidadRecompensas].mapaY = actualMapaY;
+		registroRecompensas[cantidadRecompensas].seObtuvoUnaRecompensa = 1;
+		cantidadRecompensas ++;
+		//Hacer un pull de objetos aleatorios, por ahora la llave
+		llaves[llavesActual].activa = 1;
+		llavesActual ++;
+	}
+}
+
+void VerificarSalaVacia()
+{
+	int enemigosVivos = 0;
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (slime[i].activa != 0)
+		{
+			enemigosVivos = 1;
+		}
+	}
+
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (mago[i].activa != 0)
+		{
+			enemigosVivos = 1;
+		}
+	}
+
+	if (Jefe.activa != 0)
+	{
+		enemigosVivos = 1;
+	}	
+
+	if (enemigosVivos == 1)
+	{
+		salaVacia = 0;
+	}
+	else 
+	{
+		salaVacia = 1;
+	}
+
+	printf("sala vacia = %d", salaVacia);
 }
 
 void CambioDeHabitaciones()
