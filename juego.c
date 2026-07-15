@@ -27,20 +27,24 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
+//propuestas:
+//Contador balas descendentes
+//sistema de balas: tener el arreglo de balas, si dispara buscar espacios disponibles en el arreglo, si hay espacio disponible, activa bala
+
 //Interrogatorio:
 //1 elementos estaticos más
 //botiquin?
 //vida
 //trampas?
+//cofres
 
 //1 elemento dinamico más
 //enemigo con baldi vibes
 
 //Mis ideas:
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-
-//Pedir ayuda:
-//Colicion entre slimes
+//Habitacion de punteroa
+//habitacion de puzles
 
 //Final:
 //recoger orbes y ponerlos en mapgeneral para terminar el nivel
@@ -409,7 +413,7 @@ void Disparo()
 	{
 		//comprobar que queden balas para disparar
 		//hacer el recorrido del arreglo de balas, determinar cual está inactivo, para ver si usarlo
-
+		
 		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
 		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
 		personaje.bala[balaActual].activa = 1;
@@ -1482,6 +1486,14 @@ void LogicaEnemigos()
 	int auxXSlime = 0;
 	int auxYSlime = 0;
 
+	ColisionEnemigos();
+
+	DisparoEnemigos();
+
+	LogicaJefe();
+
+	RangoVisionEnemigo();
+
 	//Slime persiguiendo al jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{		
@@ -1529,14 +1541,6 @@ void LogicaEnemigos()
 			}
 		}
 	}
-
-	ColisionEnemigos();
-
-	DisparoEnemigos();
-
-	LogicaJefe();
-
-	RangoVisionEnemigo();
 }
 
 void RangoVisionEnemigo()
@@ -1672,52 +1676,86 @@ void ColisionEnemigos()
 				personaje.vidas --;
 				personaje.invulnerable = 1;
 			}
-
-			//Colision entre slimes
-			slime[i].posXAnterior = slime[i].posX;
-			slime[i].posYAnterior = slime[i].posY;
-
-			for (int k = 0; k < MAX_ENEMIGOS; k++)
-			{
-				if (slime[k].activa != 0)
-				{
-					for (int l = k + 1; l < MAX_ENEMIGOS; l++)
-					{
-						if (slime[l].activa != 0)
-						{
-							if (Colicion(slime[k].posX, slime[k].posY, TAMANHO, TAMANHO, slime[l].posX, slime[l].posY, TAMANHO, TAMANHO))
-							{
-								/*slime[k].posX = slime[k].posXAnterior;
-								slime[k].posY = slime[k].posYAnterior;
-
-								slime[l].posX = slime[l].posXAnterior;
-								slime[l].posY = slime[l].posYAnterior;*/
-
-								/*if (slime[k].posX > slime[l].posX)
-								{
-									slime[l].posX -= slime[l].velocidad;
-								}
-								else if (slime[k].posX < slime[l].posX)
-								{
-									slime[l].posX += slime[l].velocidad;
-								}
-
-								if (slime[k].posY > slime[l].posY)
-								{
-									slime[l].posY -= slime[l].velocidad;
-								}
-								else if (slime[k].posY < slime[l].posY)
-								{
-									slime[l].posY += slime[l].velocidad;
-								}*/
-								
-							}
-						}
-					}
-				}
-			}
 		}
 	}
+
+	//Coliciones entre slimes
+	for (int k = 0; k < MAX_ENEMIGOS; k++)
+    {
+        if (slime[k].activa != 0) 
+		{
+			for (int l = 0; l < MAX_ENEMIGOS; l++)
+			{
+				if (slime[l].activa != 0) 
+				{
+					if (Colicion(slime[k].posX, slime[k].posY, TAMANHO, TAMANHO, slime[l].posX, slime[l].posY, TAMANHO, TAMANHO) && k != l)
+					{
+						slime[k].posXAnterior = slime[k].posX;
+						slime[k].posYAnterior = slime[k].posY;
+						slime[l].posXAnterior = slime[l].posX;
+						slime[l].posYAnterior = slime[l].posY;
+
+						//enfocandonos en el primer slime
+						if (slime[k].posX > slime[l].posX)
+						{
+							slime[l].posX -= slime[l].velocidad;
+						}
+						else if (slime[k].posX < slime[l].posX)
+						{
+							slime[l].posX += slime[l].velocidad;
+						}
+
+						if (slime[k].posY > slime[l].posY)
+						{
+							slime[l].posY -= slime[l].velocidad;
+						}
+						else if (slime[k].posY < slime[l].posY)
+						{
+							slime[l].posY += slime[l].velocidad;
+						}
+
+						//Enfocandonos en el segundo
+						//enfocandonos en el primer slime
+						if (slime[l].posX > slime[k].posX)
+						{
+							slime[k].posX -= slime[k].velocidad;
+						}
+						else if (slime[l].posX < slime[k].posX)
+						{
+							slime[k].posX += slime[k].velocidad;
+						}
+
+						if (slime[l].posY > slime[k].posY)
+						{
+							slime[k].posY -= slime[k].velocidad;
+						}
+						else if (slime[l].posY < slime[k].posY)
+						{
+							slime[k].posY += slime[k].velocidad;
+						}
+
+						if (ColisionMapa(sala, slime[k].posX, slime[k].posY) ||
+							ColisionMapa(sala, slime[k].posX + TAMANHO - 1, slime[k].posY) ||
+							ColisionMapa(sala, slime[k].posX + TAMANHO - 1, slime[k].posY + TAMANHO - 1) ||
+							ColisionMapa(sala, slime[k].posX, slime[k].posY + TAMANHO - 1))
+						{
+							slime[k].posX = slime[k].posXAnterior;
+							slime[k].posY = slime[k].posYAnterior;
+						}
+
+						if (ColisionMapa(sala, slime[l].posX, slime[l].posY) ||
+							ColisionMapa(sala, slime[l].posX + TAMANHO - 1, slime[l].posY) ||
+							ColisionMapa(sala, slime[l].posX + TAMANHO - 1, slime[l].posY + TAMANHO - 1) ||
+							ColisionMapa(sala, slime[l].posX, slime[l].posY + TAMANHO - 1))
+						{
+							slime[l].posX = slime[l].posXAnterior;
+							slime[l].posY = slime[l].posYAnterior;
+						}
+					}
+				}		
+			}
+		}
+    }
 
 	///////////////////////////////////////////////////////////////// COlisiones con el mago y jugador
 
