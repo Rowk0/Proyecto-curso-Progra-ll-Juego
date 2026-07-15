@@ -27,24 +27,20 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//propuestas:
+//Hacer sala recompensas jugable: Dar bono de vida y recarga, pull de objetos del cofre
 //Contador balas descendentes
 //sistema de balas: tener el arreglo de balas, si dispara buscar espacios disponibles en el arreglo, si hay espacio disponible, activa bala
+//Enemigo que te persiga y dispare
 
-//Interrogatorio:
-//1 elementos estaticos más
-//botiquin?
-//vida
-//trampas?
-//cofres
-
-//1 elemento dinamico más
-//enemigo con baldi vibes
+//Por hacer:
+//Pull de power-ups: hacer 3 prototipos +daño +rango +hitboxBalas
 
 //Mis ideas:
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
 //Habitacion de punteroa
 //habitacion de puzles
+//sonidos y musica
+//habitacion de descanso donde salgan vidas y recargas
 
 //Final:
 //recoger orbes y ponerlos en mapgeneral para terminar el nivel
@@ -178,6 +174,7 @@ typedef struct
 	int mapaX;
 	int mapaY;
 	int seObtuvoUnaRecompensa;
+	int seAbrioUnCofre;
 } registroRecompensas_;
 
 registroRecompensas_ registroRecompensas[1000];
@@ -190,16 +187,20 @@ typedef struct
 	int posY;
 	int activa;
 	int especial;
+	int cofreAbierto;
 } objeto;
 
 objeto monedas[MAX_OBJETOS];
 
 objeto llaves[MAX_OBJETOS];
 
+objeto cofres[MAX_OBJETOS];
+
 //Meter una cartucho de recarga de tipo objeto
 
 int monedasActual = 0;
 int llavesActual = 0;
+int cofreActual = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -298,7 +299,7 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
-	GeneraciónDelMapa(10);
+	GeneraciónDelMapa(3);
 
 	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
@@ -636,6 +637,7 @@ void HandicapsMejorables()
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY)
 {
 	int muerto = 0;
+	int cofreAbierto = 0;
 	slimeActual = 0;
 	salaVacia = 0;
 	seGeneroUnaRecompensa = 0;
@@ -675,6 +677,8 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	for (int i = 0; i < MAX_OBJETOS; i++)
 	{
 		monedas[i].activa = 0;
+		llaves[i].activa = 0;
+		cofres[i].activa = 0;
 	}
 	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
@@ -689,6 +693,30 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				jugador->posX = j * TAMANHO;
 				jugador->posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='C')
+			{
+				for (int i = 0; i < 1000; i++)
+				{
+					cofreAbierto = 0;
+
+					if (registroRecompensas[i].mapaX == mapaX && registroRecompensas[i].mapaY == mapaY && registroRecompensas[i].seAbrioUnCofre != 0)
+					{
+						cofreAbierto = 1;
+						break;
+					}
+				}
+				
+				if (cofreAbierto == 0)
+				{
+					cofres[cofreActual].activa = 1;
+					cofres[cofreActual].posX = j * TAMANHO;
+					cofres[cofreActual].posY = i * TAMANHO;
+					cofreActual++;
+				}
+				
+				seGeneroUnaRecompensa = 1;
 			}
 
 			if (mapa[i][j]=='*')
@@ -779,6 +807,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 			if (sala[i][j] == 'j')
 			{
+
 				for (int n = 0; n < cantidadMuertos; n++)
 				{
 					muerto = 0;
@@ -971,6 +1000,16 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		{
 			al_draw_bitmap_region(spriteSheetIcons, 3 * TAMANHO, 8 * TAMANHO, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, 0);
 		}	
+
+		//cofre
+		if (cofres[i].activa != 0 && cofres[i].cofreAbierto == 1)
+		{
+			al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, cofres[i].posX, cofres[i].posY, 0);
+		}
+		else if (cofres[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, cofres[i].posX, cofres[i].posY, 0);
+		}
 	}
 	
 	//Dibujo enemigos
@@ -1887,6 +1926,7 @@ void ColicionObjetos()
 {
 	for (int i = 0; i < MAX_OBJETOS; i++)
 	{
+		//Colicion con monedas
 		if (monedas[i].activa != 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, monedas[i].posX, monedas[i].posY, TAMANHO, TAMANHO))
@@ -1904,6 +1944,7 @@ void ColicionObjetos()
 			}
 		}
 
+		//Colicion con llaves
 		if (llaves[i].activa != 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, llaves[i].posX, llaves[i].posY, TAMANHO, TAMANHO))
@@ -1912,6 +1953,23 @@ void ColicionObjetos()
 				personaje.cantidadLlaves ++;
 			}
 		}
+
+		//Colicion con cofres
+		if (cofres[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, cofres[i].posX, cofres[i].posY, TAMANHO, TAMANHO) && personaje.cantidadLlaves > 0 && cofres[i].cofreAbierto == 0)
+			{
+				cofres[i].cofreAbierto = 1;
+				personaje.cantidadLlaves--;
+				registroRecompensas[cantidadRecompensas].mapaX = actualMapaX;
+				registroRecompensas[cantidadRecompensas].mapaY = actualMapaY;
+				registroRecompensas[cantidadRecompensas].seAbrioUnCofre = 1;
+				cantidadRecompensas++;
+				//Hacer un pull de objetos aleatorios
+			}
+		}
+		
+		
 	}
 }
 
@@ -1965,7 +2023,7 @@ void VerificarSalaVacia()
 		salaVacia = 1;
 	}
 
-	printf("sala vacia = %d", salaVacia);
+	//printf("sala vacia = %d", salaVacia);
 }
 
 void CambioDeHabitaciones()
@@ -2113,13 +2171,14 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	int terminoProceso = 0;
 	char *pullHabitaciones;
 	int auxRand = 0;
+	int seGeneroUnaHabitacionRecompensa = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 4 + 1;
+		auxRand = rand() % 5 + 1;
 
 		if (auxRand == 1)
 		{
@@ -2137,6 +2196,18 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		{
 			pullHabitaciones = "hab_general_4.txt";  
 		}
+		if (auxRand == 5 && seGeneroUnaHabitacionRecompensa == 0)
+		{
+			pullHabitaciones = "hab_recompensa.txt";
+			seGeneroUnaHabitacionRecompensa ++;
+		}
+		
+		if (a == cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
+		{
+			pullHabitaciones = "hab_recompensa.txt";
+			seGeneroUnaHabitacionRecompensa ++;
+		}
+		
 
 		//Cuando este por generar la ultima habitacion, obliga a que sea la del jefe
 		if (a == cantidadHabitacionesDeseadas - 1)
