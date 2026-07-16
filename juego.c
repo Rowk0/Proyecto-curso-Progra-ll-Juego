@@ -27,23 +27,20 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Hacer sala recompensas jugable: Dar bono de vida y recarga, pull de objetos del cofre
-//Contador balas descendentes
-//sistema de balas: tener el arreglo de balas, si dispara buscar espacios disponibles en el arreglo, si hay espacio disponible, activa bala
+//Pull de power-ups: hacer 3 prototipos +velocidad
 //Enemigo que te persiga y dispare
+//mejorar sistema de generacion de salas
+//Mejorar diseño de las salas, un poco más lebrinticas
+//Puertas con llaves
 
-//Por hacer:
-//Pull de power-ups: hacer 3 prototipos +daño +rango +hitboxBalas
-
-//Mis ideas:
+//ideas:
 //añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
-//Habitacion de punteroa
-//habitacion de puzles
 //sonidos y musica
 //habitacion de descanso donde salgan vidas y recargas
 
 //Final:
 //recoger orbes y ponerlos en mapgeneral para terminar el nivel
+//habrá diferentes maneras de recoger los orbes, una eliminando un jefe, una haciendo un puzzle, haciendo un trial con trampas, un minujuego de punteria
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -91,6 +88,8 @@ typedef	struct
 	float anguloBalaX;
 	float anguloBalaY;
 	float direccionBalaEnemigo;
+	int posXNacimiento;
+	int posYNacimiento;
 } bala_;
 
 struct dirJugador_
@@ -111,9 +110,8 @@ typedef struct
 	int cantidadMonedas;
 	int cantidadLlaves;
 	int puntaje;
-	//Rango de balas
-	//Ver si poner los power ups en un arreglo
-	bala_ bala[MAX_BALAS]; //Se puede agregar una variable cantidad de balas para limitar la municion...
+	int rangoDeBalas;
+	bala_ bala[MAX_BALAS]; 
 	int balasDisponibles;
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
 } jugador;
@@ -196,11 +194,24 @@ objeto llaves[MAX_OBJETOS];
 
 objeto cofres[MAX_OBJETOS];
 
+objeto municiones[MAX_OBJETOS];
+
+objeto vidasObjeto[MAX_OBJETOS];
+
+objeto mejoraDanho[MAX_OBJETOS];
+
+objeto mejoraRango[MAX_OBJETOS];
+
+objeto mejoraVelocidad[MAX_OBJETOS];
+
 //Meter una cartucho de recarga de tipo objeto
 
 int monedasActual = 0;
 int llavesActual = 0;
 int cofreActual = 0;
+int municionesActual = 0;
+int vidasObjetoActual = 0;
+int mejoraDanhoActual = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -412,17 +423,23 @@ void Disparo()
 
 	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && balaActual != 20)
 	{
-		//comprobar que queden balas para disparar
-		//hacer el recorrido del arreglo de balas, determinar cual está inactivo, para ver si usarlo
-		
-		personaje.bala[balaActual].posX = personaje.posX + (TAMANHO/2);
-		personaje.bala[balaActual].posY = personaje.posY + (TAMANHO/2);
-		personaje.bala[balaActual].activa = 1;
-		direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
-		personaje.bala[balaActual].anguloBalaX = cos(direccionBala) * personaje.bala[balaActual].velocidad;
-		personaje.bala[balaActual].anguloBalaY = sin(direccionBala) * personaje.bala[balaActual].velocidad;
-		balaActual++;
-		cadencia = 0;
+		for (int i = 0; i < MAX_BALAS; i++)
+		{
+			if (personaje.bala[i].activa == 0)
+			{
+				personaje.bala[i].posX = personaje.posX + (TAMANHO/2);
+				personaje.bala[i].posY = personaje.posY + (TAMANHO/2);
+				personaje.bala[i].posXNacimiento = personaje.posX + (TAMANHO/2);
+				personaje.bala[i].posYNacimiento = personaje.posY + (TAMANHO/2);
+				personaje.bala[i].activa = 1;
+				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
+				personaje.bala[i].anguloBalaX = cos(direccionBala) * personaje.bala[i].velocidad;
+				personaje.bala[i].anguloBalaY = sin(direccionBala) * personaje.bala[i].velocidad;
+				balaActual++;
+				cadencia = 0;
+				break;
+			}
+		}
 	}
 
 	//Aumenta constantemente personaje.bala[i].posY/personaje.bala[i].posX
@@ -623,11 +640,10 @@ void MovimientoJugador()
 
 void HandicapsMejorables()
 {
-	int rangoBala = 350;
 
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
-		if (personaje.bala[i].posX > personaje.posX + TAMANHO/2 + rangoBala || personaje.bala[i].posX < personaje.posX + TAMANHO/2 - rangoBala || personaje.bala[i].posY < personaje.posY + TAMANHO/2 - rangoBala || personaje.bala[i].posY > personaje.posY + TAMANHO/2 + rangoBala)
+		if (personaje.bala[i].posX > personaje.bala[i].posXNacimiento + personaje.rangoDeBalas || personaje.bala[i].posX < personaje.bala[i].posXNacimiento - personaje.rangoDeBalas || personaje.bala[i].posY < personaje.bala[i].posYNacimiento - personaje.rangoDeBalas || personaje.bala[i].posY > personaje.bala[i].posYNacimiento + personaje.rangoDeBalas)
 		{
 			personaje.bala[i].activa = 0;
 		}	
@@ -943,7 +959,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 	//Balas Jugador
 	al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, LARGO_PANTALLA - 350, ANCHO_PANTALLA - 200, TAMANHO * 3, TAMANHO * 3, 0); 
-	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", balaActual, MAX_BALAS - 1);
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", -balaActual + MAX_BALAS - 1, MAX_BALAS - 1);
 
 	//Puntaje Jugador
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 23, TAMANHO, 0, "Puntaje: %d", personaje.puntaje);
@@ -1009,6 +1025,36 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		else if (cofres[i].activa != 0)
 		{
 			al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, cofres[i].posX, cofres[i].posY, 0);
+		}
+
+		//Municiones
+		if (municiones[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 7 * TAMANHO, 42 * TAMANHO, TAMANHO, TAMANHO, municiones[i].posX, municiones[i].posY, 0);
+		}
+		
+		//vidas
+		if (vidasObjeto[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 4 * TAMANHO, 134 * TAMANHO, TAMANHO, TAMANHO, vidasObjeto[i].posX, vidasObjeto[i].posY, 0);
+		}
+
+		//mejora de daño
+		if (mejoraDanho[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 0 * TAMANHO, 83 * TAMANHO, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, 0);
+		}
+
+		//mejora de rango
+		if (mejoraRango[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 2 * TAMANHO, 83 * TAMANHO, TAMANHO, TAMANHO, mejoraRango[i].posX, mejoraRango[i].posY, 0);
+		}
+		
+		//mejora de velocidad
+		if (mejoraVelocidad[i].activa != 0)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 1 * TAMANHO, 85 * TAMANHO, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, 0);
 		}
 	}
 	
@@ -1099,7 +1145,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 0;
 	personaje.cantidadLlaves = 0;
-	//variable total balas disponibles
+	personaje.rangoDeBalas = 350;
 
 	//Inicializando enemigos
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1149,7 +1195,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		personaje.bala[i].dirBala.arriba = 0;
 		personaje.bala[i].dirBala.derecha = 0;
 		personaje.bala[i].dirBala.izquierda = 0;
-		personaje.bala[i].danho = 10;               ///// originalmente 1
+		personaje.bala[i].danho = 3;               ///// originalmente 1
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 
@@ -1186,6 +1232,12 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 			monedas[i].posY = 0;
 			monedas[i].activa = 0;
 			monedas[i].especial = 0;
+
+			mejoraDanho[i].activa = 0;
+
+			mejoraRango[i].activa = 0;
+
+			mejoraVelocidad[i].activa = 0;
 		}
 	}
 
@@ -1924,6 +1976,8 @@ void ColisionEnemigos()
 
 void ColicionObjetos()
 {
+	int auxRand = 0;
+
 	for (int i = 0; i < MAX_OBJETOS; i++)
 	{
 		//Colicion con monedas
@@ -1954,6 +2008,60 @@ void ColicionObjetos()
 			}
 		}
 
+		//Colicion con municiones
+		if (municiones[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, municiones[i].posX, municiones[i].posY, TAMANHO, TAMANHO))
+			{
+				balaActual = 0;
+				municiones[i].activa = 0;
+			}
+		}
+
+		//Colicion con vidas
+		if (vidasObjeto[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, vidasObjeto[i].posX, vidasObjeto[i].posY, TAMANHO, TAMANHO))
+			{
+				personaje.vidas++;
+				vidasObjeto[i].activa = 0;
+			}
+		}
+
+		//Colicion con mejora de Danho
+		if (mejoraDanho[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, TAMANHO, TAMANHO))
+			{
+				for (int i = 0; i < MAX_BALAS; i++)
+				{
+					personaje.bala[i].danho++;
+				}
+
+				mejoraDanho[i].activa = 0;
+			}
+		}
+
+		//Colicion con mejora de rango
+		if (mejoraRango[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraRango[i].posX, mejoraRango[i].posY, TAMANHO, TAMANHO))
+			{
+				personaje.rangoDeBalas += 100;
+				mejoraRango[i].activa = 0;
+			}
+		}
+
+		//Colicion con mejora de velocidad
+		if (mejoraVelocidad[i].activa != 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, TAMANHO, TAMANHO))
+			{
+				personaje.velocidad += 2;
+				mejoraVelocidad[i].activa = 0;
+			}
+		}
+		
 		//Colicion con cofres
 		if (cofres[i].activa != 0)
 		{
@@ -1965,11 +2073,73 @@ void ColicionObjetos()
 				registroRecompensas[cantidadRecompensas].mapaY = actualMapaY;
 				registroRecompensas[cantidadRecompensas].seAbrioUnCofre = 1;
 				cantidadRecompensas++;
-				//Hacer un pull de objetos aleatorios
+
+				//Siempre dará de recompensa una recarga
+				municiones[municionesActual].activa = 1;
+				municiones[municionesActual].posX = cofres[i].posX + TAMANHO * 3;
+				municiones[municionesActual].posY = cofres[i].posY;
+				municionesActual++;
+
+				//Siempre dará un corazon
+				vidasObjeto[vidasObjetoActual].activa = 1;
+				vidasObjeto[vidasObjetoActual].posX = cofres[i].posX - TAMANHO * 3;
+				vidasObjeto[vidasObjetoActual].posY = cofres[i].posY;
+				vidasObjetoActual++;
+
+				//Siempre dará una moneda
+				monedas[monedasActual].activa = 1;
+				monedas[monedasActual].posX = cofres[i].posX;
+				monedas[monedasActual].posY = cofres[i].posY + TAMANHO * 3;
+				monedasActual++;
+
+				//Pull de objetos que tienen probabilidad de salir
+				auxRand = rand() % 2 + 1;
+				auxRand = 3;
+
+				//mejora de daño
+				if (auxRand == 1)
+				{
+					for (int j = 0; j < MAX_OBJETOS; j++)
+					{
+						if (mejoraDanho[j].activa == 0)
+						{
+							mejoraDanho[j].activa = 1;
+							mejoraDanho[j].posX = cofres[i].posX;
+							mejoraDanho[j].posY = cofres[i].posY - TAMANHO * 3;
+							break;
+						}
+					}
+				}
+
+				if (auxRand == 2)
+				{
+					for (int j = 0; j < MAX_OBJETOS; j++)
+					{
+						if (mejoraRango[j].activa == 0)
+						{
+							mejoraRango[j].activa = 1;
+							mejoraRango[j].posX = cofres[i].posX;
+							mejoraRango[j].posY = cofres[i].posY - TAMANHO * 3;
+							break;
+						}
+					}
+				}
+
+				if (auxRand == 3)
+				{
+					for (int j = 0; j < MAX_OBJETOS; j++)
+					{
+						if (mejoraVelocidad[j].activa == 0)
+						{
+							mejoraVelocidad[j].activa = 1;
+							mejoraVelocidad[j].posX = cofres[i].posX;
+							mejoraVelocidad[j].posY = cofres[i].posY - TAMANHO * 3;
+							break;
+						}
+					}
+				}
 			}
 		}
-		
-		
 	}
 }
 
