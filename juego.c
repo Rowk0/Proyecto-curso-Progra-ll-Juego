@@ -28,7 +28,7 @@
 ////////////////////////////////////////////////////////////////  tareas
 
 //Importante
-//Araña que va vertical o horizontal
+//orbes
 
 //mejorar sistema de generacion de salas
 //Mejorar diseño de las salas, un poco más lebrinticas
@@ -36,13 +36,11 @@
 //Puertas con llaves
 //trampas
 
-//Suspend
-//Enemigo que te persiga y dispare tres balas
-
 //ideas:
 //añadir tipos de habitaciones (Tienda que provee power-ups)
 //sonidos y musica
 //habitacion de descanso donde salgan vidas y recargas
+//Enemigo que te persiga y dispare tres balas
 
 //Final:
 //recoger orbes y ponerlos en mapgeneral para terminar el nivel
@@ -198,6 +196,7 @@ typedef struct
 	int activa;
 	int especial;
 	int cofreAbierto;
+	int seObtuvo;
 } objeto;
 
 objeto monedas[MAX_OBJETOS];
@@ -215,6 +214,11 @@ objeto mejoraDanho[MAX_OBJETOS];
 objeto mejoraRango[MAX_OBJETOS];
 
 objeto mejoraVelocidad[MAX_OBJETOS];
+
+objeto mapaRojo;
+objeto mapaVerde;
+objeto mapaAzul;
+objeto mapaNaranjo;
 
 //Meter una cartucho de recarga de tipo objeto
 
@@ -420,6 +424,12 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
+
+	//TERMINAR EL PRIMER NIVEL
+	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1)
+	{
+		JUEGO = 0;
+	}
 
 	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
@@ -710,6 +720,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		llaves[i].activa = 0;
 		cofres[i].activa = 0;
 	}
+
+	mapaAzul.activa = 0;
+	mapaRojo.activa = 0;
+	mapaNaranjo.activa = 0;
+	mapaVerde.activa = 0;
 	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
@@ -723,6 +738,34 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				jugador->posX = j * TAMANHO;
 				jugador->posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='a')
+			{
+				mapaAzul.activa = 1;
+				mapaAzul.posX = j * TAMANHO;
+				mapaAzul.posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='v')
+			{
+				mapaVerde.activa = 1;
+				mapaVerde.posX = j * TAMANHO;
+				mapaVerde.posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='r')
+			{
+				mapaRojo.activa = 1;
+				mapaRojo.posX = j * TAMANHO;
+				mapaRojo.posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j]=='n')
+			{
+				mapaNaranjo.activa = 1;
+				mapaNaranjo.posX = j * TAMANHO;
+				mapaNaranjo.posY = i * TAMANHO;
 			}
 
 			if (mapa[i][j]=='C')
@@ -937,9 +980,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				}
 			}
 
-			if (magoActual > MAX_ENEMIGOS - 1)
+			if (aranhaActual > MAX_ENEMIGOS - 1)
 			{
-				magoActual = 0;
+				aranhaActual = 0;
 			}
     	}
 	}
@@ -1106,6 +1149,26 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		{
 			al_draw_bitmap_region(spriteSheetIcons, 1 * TAMANHO, 85 * TAMANHO, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, 0);
 		}
+	}
+
+	if (mapaAzul.activa != 0)
+	{
+		al_draw_bitmap_region(spriteSheetIcons, 9 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, mapaAzul.posX, mapaAzul.posY, 0);
+	}
+
+	if (mapaRojo.activa != 0)
+	{
+		al_draw_bitmap_region(spriteSheetIcons, 8 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, mapaRojo.posX, mapaRojo.posY, 0);
+	}
+
+	if (mapaNaranjo.activa != 0)
+	{
+		al_draw_bitmap_region(spriteSheetIcons, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, mapaNaranjo.posX, mapaNaranjo.posY, 0);
+	}
+
+	if (mapaVerde.activa != 0)
+	{
+		al_draw_bitmap_region(spriteSheetIcons, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, mapaVerde.posX, mapaVerde.posY, 0);
 	}
 	
 	//Dibujo enemigos
@@ -2135,6 +2198,10 @@ void ColisionEnemigos()
 					monedas[monedasActual].activa = 1;
 					monedasActual ++;
 
+					mapaRojo.activa = 1;
+					mapaRojo.posX = Jefe.posX;
+					mapaRojo.posY = Jefe.posY;
+
 					if (cantidadMuertos < 1000)
 					{
 						//Cuando muere un slime se registra el mapa donde murio en una posicion del arreglo
@@ -2173,6 +2240,43 @@ void ColisionEnemigos()
 void ColicionObjetos()
 {
 	int auxRand = 0;
+
+	if (mapaRojo.activa != 0)
+	{
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mapaRojo.posX, mapaRojo.posY, TAMANHO, TAMANHO))
+		{
+			mapaRojo.activa = 0;	
+			mapaRojo.seObtuvo = 1;
+		}
+	}
+
+	if (mapaAzul.activa != 0)
+	{
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mapaAzul.posX, mapaAzul.posY, TAMANHO, TAMANHO))
+		{
+			mapaAzul.activa = 0;	
+			mapaAzul.seObtuvo = 1;
+		}
+	}
+
+	if (mapaVerde.activa != 0)
+	{
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mapaVerde.posX, mapaVerde.posY, TAMANHO, TAMANHO))
+		{
+			mapaVerde.activa = 0;	
+			mapaVerde.seObtuvo = 1;
+		}
+	}
+
+	if (mapaNaranjo.activa != 0)
+	{
+		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mapaNaranjo.posX, mapaNaranjo.posY, TAMANHO, TAMANHO))
+		{
+			mapaNaranjo.activa = 0;	
+			mapaNaranjo.seObtuvo = 1;
+		}
+	}
+	
 
 	for (int i = 0; i < MAX_OBJETOS; i++)
 	{
@@ -2289,8 +2393,7 @@ void ColicionObjetos()
 				monedasActual++;
 
 				//Pull de objetos que tienen probabilidad de salir
-				auxRand = rand() % 2 + 1;
-				auxRand = 3;
+				auxRand = rand() % 3 + 1;
 
 				//mejora de daño
 				if (auxRand == 1)
@@ -2485,8 +2588,6 @@ void CambioDeHabitaciones()
 			}
 		}
 	}
-
-
 }
 
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje)
