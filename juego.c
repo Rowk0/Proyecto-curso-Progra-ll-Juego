@@ -27,14 +27,20 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Pull de power-ups: hacer 3 prototipos +velocidad
-//Enemigo que te persiga y dispare
+//Importante
+//Araña que va vertical o horizontal
+
 //mejorar sistema de generacion de salas
 //Mejorar diseño de las salas, un poco más lebrinticas
+//Añadir más salas variadas
 //Puertas con llaves
+//trampas
+
+//Suspend
+//Enemigo que te persiga y dispare tres balas
 
 //ideas:
-//añadir tipos de habitaciones (Tienda que provee power-ups, sala de recompensas con power-ups)
+//añadir tipos de habitaciones (Tienda que provee power-ups)
 //sonidos y musica
 //habitacion de descanso donde salgan vidas y recargas
 
@@ -142,6 +148,8 @@ typedef struct
 	int posXAnterior;
 	int posYAnterior;
 	int ataquesEnemigos;
+	int chocoConPared;
+	int auxRandAranha;
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
@@ -150,9 +158,13 @@ enemigo Jefe;
 
 enemigo mago[MAX_ENEMIGOS];
 
+enemigo aranha[MAX_ENEMIGOS];
+
 int slimeActual = 0;
 
 int magoActual = 0;
+
+int aranhaActual = 0;
 
 typedef struct 
 {
@@ -310,7 +322,7 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
-	GeneraciónDelMapa(3);
+	GeneraciónDelMapa(10);
 
 	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
@@ -668,6 +680,8 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	{
 		slime[k].activa = 0;
 		slime[k].ataquesEnemigos = 0;
+
+		aranha[k].activa = 0;
 	}
 
 	Jefe.activa = 0;
@@ -883,6 +897,42 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						mago[magoActual].posYGeneracion = i;
 
 						magoActual ++;
+					}
+				}
+			}
+
+			if (magoActual > MAX_ENEMIGOS - 1)
+			{
+				magoActual = 0;
+			}
+
+			//cargar Arañas 
+			if (mapa[i][j]=='A')
+			{
+				for (int m = 0; m < cantidadMuertos; m++)
+				{
+					muerto = 0;
+
+					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					{
+						muerto = 1;
+						break;
+					}
+				}
+				
+				if (muerto == 0)
+				{
+					if(aranha[magoActual].activa == 0)
+					{
+						aranha[aranhaActual].activa = 1;
+						aranha[aranhaActual].posX = j * TAMANHO;
+						aranha[aranhaActual].posY = i * TAMANHO;
+						aranha[aranhaActual].vida = 2;
+
+						aranha[aranhaActual].posXGeneracion = j;
+						aranha[aranhaActual].posYGeneracion = i;
+
+						aranhaActual ++;
 					}
 				}
 			}
@@ -1171,6 +1221,19 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		mago[i].posXGeneracion = 0;
 		mago[i].posYGeneracion = 0;
 		mago[i].ataquesEnemigos = 0;
+
+		aranha[i].posX = 0;
+		aranha[i].posY = 0;
+		aranha[i].velocidad = 5;
+		aranha[i].activa = 0;
+		aranha[i].tipo = 0;
+		aranha[i].direccion = 1;
+		aranha[i].vida = 2;
+		aranha[i].posXGeneracion = 0;
+		aranha[i].posYGeneracion = 0;
+		aranha[i].ataquesEnemigos = 0;
+		aranha[i].chocoConPared = 0;
+		aranha[i].auxRandAranha = 0;
 	}
 
 	Jefe.posX = 0;
@@ -1548,6 +1611,26 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 				al_draw_bitmap_region(spriteSheet, 7 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, mago[i].posX, mago[i].posY, 0);
 			}
 		}
+
+		if (aranha[i].activa != 0)
+		{
+			if (controlSprites >= 0 && controlSprites <= 10)
+			{
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 27 * TAMANHO, TAMANHO, TAMANHO, aranha[i].posX, aranha[i].posY, 0);
+			}
+			if (controlSprites > 10 && controlSprites <= 20)
+			{
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 27 * TAMANHO, TAMANHO, TAMANHO, aranha[i].posX, aranha[i].posY, 0);
+			}
+			if (controlSprites > 20 && controlSprites <= 30)
+			{
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 27 * TAMANHO, TAMANHO, TAMANHO, aranha[i].posX, aranha[i].posY, 0);
+			}
+			if (controlSprites > 30 && controlSprites <= 40)
+			{
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 27 * TAMANHO, TAMANHO, TAMANHO, aranha[i].posX, aranha[i].posY, 0);
+			}
+		}
 	}
 
 	if (Jefe.activa != 0)
@@ -1576,6 +1659,8 @@ void LogicaEnemigos()
 	//Colicion slime y pared
 	int auxXSlime = 0;
 	int auxYSlime = 0;
+	int auxXAranha = 0;
+	int auxYAranha = 0;
 
 	ColisionEnemigos();
 
@@ -1584,6 +1669,60 @@ void LogicaEnemigos()
 	LogicaJefe();
 
 	RangoVisionEnemigo();
+
+	//Araña eligiendo que eje moverse
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		auxXAranha = aranha[i].posX;
+		auxYAranha = aranha[i].posY;
+
+		if (aranha[i].auxRandAranha == 0)
+		{
+			aranha[i].auxRandAranha = rand() % 2 + 1;
+		}
+		
+		if (aranha[i].auxRandAranha == 1)
+		{
+			if (aranha[i].activa != 0 && aranha[i].chocoConPared%2 == 0)
+			{
+				aranha[i].posX += aranha[i].velocidad;
+			} 
+			else if (aranha[i].activa != 0 && aranha[i].chocoConPared%2 != 0)
+			{
+				aranha[i].posX -= aranha[i].velocidad;
+			}
+
+			if (ColisionMapa(sala, aranha[i].posX, aranha[i].posY) || 
+				ColisionMapa(sala, aranha[i].posX + TAMANHO - 1, aranha[i].posY) || 
+				ColisionMapa(sala, aranha[i].posX + TAMANHO - 1, aranha[i].posY + TAMANHO - 1) ||
+				ColisionMapa(sala, aranha[i].posX, aranha[i].posY + TAMANHO - 1))
+			{
+				aranha[i].posX = auxXAranha;
+				aranha[i].chocoConPared++;
+			}
+		}
+		
+		if (aranha[i].auxRandAranha == 2)
+		{
+			if (aranha[i].activa != 0 && aranha[i].chocoConPared%2 == 0)
+			{
+				aranha[i].posY += aranha[i].velocidad;
+			} 
+			else if (aranha[i].activa != 0 && aranha[i].chocoConPared%2 != 0)
+			{
+				aranha[i].posY -= aranha[i].velocidad;
+			}
+
+			if (ColisionMapa(sala, aranha[i].posX, aranha[i].posY) || 
+				ColisionMapa(sala, aranha[i].posX + TAMANHO - 1, aranha[i].posY) || 
+				ColisionMapa(sala, aranha[i].posX + TAMANHO - 1, aranha[i].posY + TAMANHO - 1) ||
+				ColisionMapa(sala, aranha[i].posX, aranha[i].posY + TAMANHO - 1))
+			{
+				aranha[i].posY = auxYAranha;
+				aranha[i].chocoConPared++;
+			}
+		}
+	}
 
 	//Slime persiguiendo al jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1714,6 +1853,63 @@ void LogicaJefe()
 
 void ColisionEnemigos()
 {
+	/////////////////////////////////////////////////////////////////////// Colisiones arañas y jugador
+	for (int i = 0; i < MAX_ENEMIGOS; i++)
+	{
+		if (aranha[i].activa != 0)
+		{
+			//Colision aranha y bala
+			for (int j = 0; j < MAX_BALAS; j++)
+			{
+				if (Colicion(aranha[i].posX, aranha[i].posY, TAMANHO, TAMANHO, personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO / 4, TAMANHO / 4))
+				{
+					if(personaje.bala[j].activa != 0)
+					{
+						aranha[i].vida -= personaje.bala[j].danho;
+						personaje.bala[j].activa = 0;
+					}
+
+					if(aranha[i].vida <= 0 && aranha[i].activa == 1)
+					{
+						aranha[i].activa = 0;
+						personaje.puntaje = personaje.puntaje + 10;
+
+						// Aparicion monedas al morir un enemigo
+						monedas[monedasActual].posX = aranha[i].posX;
+						monedas[monedasActual].posY = aranha[i].posY;
+						monedas[monedasActual].activa = 1;
+						monedasActual ++;
+
+
+						if (cantidadMuertos < 1000)
+						{
+							//Cuando muere un aranha se registra el mapa donde murio en una posicion del arreglo
+							strcpy(registroMuertes[cantidadMuertos].registroMapa, mapa[actualMapaY][actualMapaX]);
+
+							//Se registra su lugar de aparicion original
+							registroMuertes[cantidadMuertos].fila = aranha[i].posYGeneracion;
+							registroMuertes[cantidadMuertos].columna = aranha[i].posXGeneracion;
+
+							//Registramos la parte del mapa donde murieron
+							registroMuertes[cantidadMuertos].mapaX = actualMapaX;
+							registroMuertes[cantidadMuertos].mapaY = actualMapaY;
+
+							cantidadMuertos ++;
+						}
+					}
+				}
+			}
+
+			//Colision aranha y jugador
+			if (Colicion(aranha[i].posX, aranha[i].posY, TAMANHO, TAMANHO, personaje.posX, personaje.posY, TAMANHO, TAMANHO) && personaje.invulnerable == 0)
+			{
+				personaje.vidas --;
+				personaje.invulnerable = 1;
+			}
+		}
+	}
+
+
 	/////////////////////////////////////////////////////////////////////// Colisiones slimes y jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
@@ -2165,15 +2361,7 @@ void VerificarSalaVacia()
 
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
-		if (slime[i].activa != 0)
-		{
-			enemigosVivos = 1;
-		}
-	}
-
-	for (int i = 0; i < MAX_ENEMIGOS; i++)
-	{
-		if (mago[i].activa != 0)
+		if (slime[i].activa != 0 || mago[i].activa != 0 || aranha[i].activa != 0)
 		{
 			enemigosVivos = 1;
 		}
