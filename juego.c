@@ -20,6 +20,7 @@
 #define MAX_OBJETOS 100
 #define MAX_INTERACTUABLES 10
 #define MAX_REGISTROS 1000
+#define MAX_DIANAS 10
 
 //Ideas deshechadas: 
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
@@ -167,6 +168,23 @@ int slimeActual = 0;
 int magoActual = 0;
 
 int aranhaActual = 0;
+
+typedef struct 
+{
+	int posX;
+	int posY;
+	int activa;
+	int destruida;
+	int velocidad;
+	int chocoConPared;
+	int auxRanDianas;
+} dianas_;
+
+dianas_ dianas[MAX_DIANAS];
+
+int dianasActuales = 0;
+
+int cantidadDianasDestruidas = 0;
 
 typedef struct 
 {
@@ -323,6 +341,7 @@ void RangoVisionEnemigo();
 void VerificarSalaVacia();
 void GeneracionDeRecompensas();
 void ColicionInteractuables();
+void LogicaDianas();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -456,6 +475,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	VerificarSalaVacia();
 
 	GeneracionDeRecompensas();
+
+	LogicaDianas();
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -464,6 +485,25 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1)
 	{
 		JUEGO = 0;
+	}
+
+	//Verificar evento de dianas
+	cantidadDianasDestruidas = 0;
+
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		if (dianas[i].destruida != 0)
+		{
+			cantidadDianasDestruidas++;
+
+			if (cantidadDianasDestruidas >= 5 && mapaVerde.especial == 0)
+			{
+				mapaVerde.activa = 1;
+				mapaVerde.posX = LARGO_PANTALLA / 2;
+				mapaVerde.posY = ANCHO_PANTALLA / 2;
+				mapaVerde.especial = 1;
+			}
+		}
 	}
 
 	//Verificar el evento de fogatas
@@ -790,6 +830,12 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	}
 
 	fogataActual = 0;
+
+	//Reinicio Dianas
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		dianas[i].activa = 0;
+	}
 	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
@@ -853,6 +899,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				seGeneroUnaRecompensa++;
 			}
 
+			//Cargar mapa verde
 			if (mapa[i][j]=='v')
 			{
 				mapaVerde.activa = 1;
@@ -860,6 +907,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				mapaVerde.posY = i * TAMANHO;
 			}
 
+			//Cargar mapa rojo
 			if (mapa[i][j]=='r')
 			{
 				mapaRojo.activa = 1;
@@ -867,6 +915,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				mapaRojo.posY = i * TAMANHO;
 			}
 
+			//Cargar mapa naranjo
 			if (mapa[i][j]=='n')
 			{
 				mapaNaranjo.activa = 1;
@@ -874,13 +923,32 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				mapaNaranjo.posY = i * TAMANHO;
 			}
 
+			//Cargar municiones
 			if(mapa[i][j]=='R')
 			{
 				municiones[municionesActual].activa = 1;
 				municiones[municionesActual].posX = j * TAMANHO;
 				municiones[municionesActual].posY = i * TAMANHO;
+				municionesActual++;
 			}
 
+			if (mapa[i][j] == 'D')
+			{
+				dianas[dianasActuales].posX = j * TAMANHO;
+				dianas[dianasActuales].posY = i * TAMANHO;
+				dianas[dianasActuales].activa = 1;
+				dianasActuales++;
+
+				seGeneroUnaRecompensa++;
+			}
+
+			if (dianasActuales >= MAX_DIANAS)
+			{
+				dianasActuales = 0;
+			}
+			
+
+			//Cargar cofres
 			if (mapa[i][j]=='C')
 			{
 				for (int i = 0; i < 1000; i++)
@@ -1121,19 +1189,19 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 				{
 					if (controlSprites >= 0 && controlSprites <= 10)
 					{
-						al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+						al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
 					}
 					if (controlSprites >= 10 && controlSprites <= 20)
 					{
-						al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+						al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
 					}
 					if (controlSprites >= 20 && controlSprites <= 30)
 					{
-						al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+						al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
 					}
 					if (controlSprites >= 30 && controlSprites <= 40)
 					{
-						al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+						al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
 					}
 				}
 			}
@@ -1223,6 +1291,31 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 			}		
 		}
 	}
+
+	//Dibujo de dianas
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		if (dianas[i].activa != 0)
+		{
+			if (controlSprites >= 0 && controlSprites <= 10)
+			{
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+			}
+			if (controlSprites >= 10 && controlSprites <= 20)
+			{
+				al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+			}
+			if (controlSprites >= 20 && controlSprites <= 30)
+			{
+				al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+			}
+			if (controlSprites >= 30 && controlSprites <= 40)
+			{
+				al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);
+			}
+		}
+	}
+	
 
 	//Dibujo de objetos
 	for (int i = 0; i < MAX_OBJETOS; i++)
@@ -1390,7 +1483,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.movimientoJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
-	personaje.vidas = 3;
+	personaje.vidas = 6;
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 0;
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
@@ -1490,22 +1583,26 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 			mago[m].bala[i].anguloBalaX = 0;
 			mago[m].bala[i].anguloBalaY = 0;
 		}
-
-		for (int i = 0; i < MAX_OBJETOS; i++)
-		{
-			monedas[i].posX = 0;
-			monedas[i].posY = 0;
-			monedas[i].activa = 0;
-			monedas[i].especial = 0;
-
-			mejoraDanho[i].activa = 0;
-
-			mejoraRango[i].activa = 0;
-
-			mejoraVelocidad[i].activa = 0;
-		}
 	}
 
+	//Inicializar objetos
+	for (int i = 0; i < MAX_OBJETOS; i++)
+	{
+		monedas[i].posX = 0;
+		monedas[i].posY = 0;
+		monedas[i].activa = 0;
+		monedas[i].especial = 0;
+
+		mejoraDanho[i].activa = 0;
+
+		mejoraRango[i].activa = 0;
+
+		mejoraVelocidad[i].activa = 0;
+	}
+	
+	mapaVerde.especial = 0;
+
+	//Inicializar mapa
 	for (int i = 0; i < FILAS_MAPA; i++)
 	{
 		for (int j = 0; i < COLUMNAS_MAPA; i++)
@@ -1522,6 +1619,16 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		fogata[i].posY = 0;
 		fogata[i].fogataActiva = 0;
 	}
+
+	//Dianas inicializacion
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		dianas[i].activa = 0;
+		dianas[i].velocidad = 10;
+		dianas[i].chocoConPared = 0;
+		dianas[i].auxRanDianas = 0;
+	}
+	
 }
 
 void InputHandle()
@@ -2612,6 +2719,85 @@ void ColicionInteractuables()
 			}
 		}
 	}
+
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		if (dianas[i].activa != 0)
+		{
+			for (int j = 0; j < MAX_BALAS; j++)
+			{
+				if (personaje.bala[j].activa != 0)
+				{
+					if (Colicion(personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO/4, TAMANHO/4, dianas[i].posX, dianas[i].posY, TAMANHO, TAMANHO))
+					{
+						personaje.bala[j].activa = 0;
+						dianas[i].activa = 0;
+						dianas[i].destruida = 1;
+					}
+				}
+			}
+		}
+	}
+}
+
+void LogicaDianas()
+{
+	int auxXDiana = 0;
+	int auxYDiana = 0;
+	int auxRand = 0;
+
+	for (int i = 0; i < MAX_DIANAS; i++)
+	{
+		auxXDiana = dianas[i].posX;
+		auxYDiana = dianas[i].posY;
+
+		if (dianas[i].auxRanDianas == 0)
+		{
+			dianas[i].auxRanDianas = rand() % 2 + 1;
+		}
+		
+		if (dianas[i].auxRanDianas == 1)
+		{
+			if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 == 0)
+			{
+				dianas[i].posX += dianas[i].velocidad;
+			} 
+			else if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 != 0)
+			{
+				dianas[i].posX -= dianas[i].velocidad;
+			}
+
+			if (ColisionMapa(sala, dianas[i].posX, dianas[i].posY) || 
+				ColisionMapa(sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY) || 
+				ColisionMapa(sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY + TAMANHO - 1) ||
+				ColisionMapa(sala, dianas[i].posX, dianas[i].posY + TAMANHO - 1))
+			{
+				dianas[i].posX = auxXDiana;
+				dianas[i].chocoConPared++;
+			}
+		}
+		
+		if (dianas[i].auxRanDianas == 2)
+		{
+			if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 == 0)
+			{
+				dianas[i].posY += dianas[i].velocidad;
+			} 
+			else if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 != 0)
+			{
+				dianas[i].posY -= dianas[i].velocidad;
+			}
+
+			if (ColisionMapa(sala, dianas[i].posX, dianas[i].posY) || 
+				ColisionMapa(sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY) || 
+				ColisionMapa(sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY + TAMANHO - 1) ||
+				ColisionMapa(sala, dianas[i].posX, dianas[i].posY + TAMANHO - 1))
+			{
+				dianas[i].posY = auxYDiana;
+				dianas[i].chocoConPared++;
+			}
+		}
+	}
 }
 
 void GeneracionDeRecompensas()
@@ -2804,13 +2990,14 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	int auxRand = 0;
 	int seGeneroUnaHabitacionRecompensa = 0;
 	int fogatasGeneradas = 0;
+	int seGeneroUnaHabitacioPunteria = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 6 + 1;
+		auxRand = rand() % 7 + 1;
 
 		if (auxRand == 1)
 		{
@@ -2832,18 +3019,27 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
 		}
-		if (auxRand == 6)
+		if (auxRand == 6 && fogatasGeneradas < 3)
 		{
 			pullHabitaciones = "hab_fogata.txt";
 		}
+		if (auxRand == 7 && seGeneroUnaHabitacioPunteria == 0)
+		{
+			pullHabitaciones = "hab_punteria.txt";
+		}
+		
+		if (a >= cantidadHabitacionesDeseadas - 6 && seGeneroUnaHabitacioPunteria == 0)
+		{
+			pullHabitaciones = "hab_punteria.txt";
+		}
 
-		if (a == cantidadHabitacionesDeseadas - 5 && fogatasGeneradas != 3)
+		if (a >= cantidadHabitacionesDeseadas - 5 && fogatasGeneradas < 3)
 		{
 			pullHabitaciones = "hab_fogata.txt"	;
 		}
 		
 		//La penultima habitacion generada siempre sera una sala de recompensa si no se genero antes
-		if (a == cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
+		if (a >= cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
 			seGeneroUnaHabitacionRecompensa ++;
@@ -2879,6 +3075,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
+				if (pullHabitaciones == "hab_punteria.txt")
+				{
+					seGeneroUnaHabitacioPunteria++;
+				}
+
 				printf("Habitacion 1 generada");
 			}
 			else
@@ -2907,6 +3108,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				if (pullHabitaciones == "hab_recompensa.txt")
 				{
 					seGeneroUnaHabitacionRecompensa++;
+				}
+
+				if (pullHabitaciones == "hab_punteria.txt")
+				{
+					seGeneroUnaHabitacioPunteria++;
 				}
 
 				printf("Habitacion 3 generada");
@@ -2939,6 +3145,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
+				if (pullHabitaciones == "hab_punteria.txt")
+				{
+					seGeneroUnaHabitacioPunteria++;
+				}
+
 				printf("Habitacion 2 generada");
 			}
 			else
@@ -2967,6 +3178,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				if (pullHabitaciones == "hab_recompensa.txt")
 				{
 					seGeneroUnaHabitacionRecompensa++;
+				}
+
+				if (pullHabitaciones == "hab_punteria.txt")
+				{
+					seGeneroUnaHabitacioPunteria++;
 				}
 
 				printf("Habitacion 4 generada");
