@@ -15,9 +15,10 @@
 #define LARGO_SPRITES 30
 #define LARGO_PANTALLA 1920
 #define ANCHO_PANTALLA 1088
-#define MAX_BALAS 21
+#define MAX_BALAS 20
 #define MAX_ENEMIGOS 20
 #define MAX_OBJETOS 100
+#define MAX_INTERACTUABLES 10
 
 //Ideas deshechadas: 
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
@@ -27,24 +28,24 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Importante
-//orbes
+//habrá diferentes maneras de recoger los orbes, una eliminando un jefe, una haciendo un puzzle, haciendo un trial con trampas, un minujuego de punteria
+//Pantalla desea jugar otra vez al terminar el juego
 
+//Arreglar generacion de arañas
 //mejorar sistema de generacion de salas
-//Mejorar diseño de las salas, un poco más lebrinticas
+//Mejorar diseño de las salas, un poco más leberinticas
 //Añadir más salas variadas
 //Puertas con llaves
 //trampas
+
+//Pedir Ayuda:
+//desenlazar balasActual y MAXBALAS
 
 //ideas:
 //añadir tipos de habitaciones (Tienda que provee power-ups)
 //sonidos y musica
 //habitacion de descanso donde salgan vidas y recargas
 //Enemigo que te persiga y dispare tres balas
-
-//Final:
-//recoger orbes y ponerlos en mapgeneral para terminar el nivel
-//habrá diferentes maneras de recoger los orbes, una eliminando un jefe, una haciendo un puzzle, haciendo un trial con trampas, un minujuego de punteria
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -115,6 +116,7 @@ typedef struct
 	int cantidadLlaves;
 	int puntaje;
 	int rangoDeBalas;
+	int cantidadDeBalas;
 	bala_ bala[MAX_BALAS]; 
 	int balasDisponibles;
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
@@ -148,6 +150,7 @@ typedef struct
 	int ataquesEnemigos;
 	int chocoConPared;
 	int auxRandAranha;
+	int rangoDeBalas;
 } enemigo;
  
 enemigo slime[MAX_ENEMIGOS];
@@ -220,14 +223,27 @@ objeto mapaVerde;
 objeto mapaAzul;
 objeto mapaNaranjo;
 
-//Meter una cartucho de recarga de tipo objeto
-
 int monedasActual = 0;
 int llavesActual = 0;
 int cofreActual = 0;
 int municionesActual = 0;
 int vidasObjetoActual = 0;
 int mejoraDanhoActual = 0;
+
+//Interactuables
+typedef struct 
+{
+	int posX;
+	int posY;
+	int activa;
+	int fogataActiva;
+} interactuables;
+
+interactuables fogata[MAX_INTERACTUABLES];
+
+int fogataActual = 0;
+
+int cantidadfogatasActivas = 0;
 
 ///////////////////////////////////////////////////////////////// Variables globales
 
@@ -290,6 +306,7 @@ void ColicionObjetos();
 void RangoVisionEnemigo();
 void VerificarSalaVacia();
 void GeneracionDeRecompensas();
+void ColicionInteractuables();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -416,6 +433,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 
 	ColicionObjetos();
 
+	ColicionInteractuables();
+
 	CambioDeHabitaciones();
 
 	VerificarSalaVacia();
@@ -431,6 +450,25 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 		JUEGO = 0;
 	}
 
+	//Verificar el evento de fogatas
+	if (cantidadfogatasActivas >= 4)
+	{
+		if (actualMapaX == COLUMNAS_MAPA / 2 + 1 && actualMapaY == FILAS_MAPA / 2 + 1)
+		{
+			for (int i = 0; i < FILAS_HABITACION; i++)
+			{
+				for (int j = 0; j < COLUMNAS_HABITACION; j++)
+				{
+					if (mapa[i][j] == 'l')
+					{
+						mapa[i][j] = '.';
+					}
+				}
+			}
+		}
+	}
+	
+
 	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
 	{
@@ -443,7 +481,7 @@ void Disparo()
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
 
-	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && balaActual != 20)
+	if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && personaje.cantidadDeBalas < MAX_BALAS)
 	{
 		for (int i = 0; i < MAX_BALAS; i++)
 		{
@@ -457,7 +495,7 @@ void Disparo()
 				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
 				personaje.bala[i].anguloBalaX = cos(direccionBala) * personaje.bala[i].velocidad;
 				personaje.bala[i].anguloBalaY = sin(direccionBala) * personaje.bala[i].velocidad;
-				balaActual++;
+				personaje.cantidadDeBalas++;
 				cadencia = 0;
 				break;
 			}
@@ -481,12 +519,6 @@ void Disparo()
 			personaje.bala[i].activa = 0;
 		}
 	}
-
-	//Cuando el arreglo este a punto de terminar, se reinicia
-	/*if (balaActual > MAX_BALAS - 1)
-	{
-		balaActual = 0;
-	}*/
 }
 
 void DisparoEnemigos()
@@ -501,6 +533,8 @@ void DisparoEnemigos()
 	{
 		Jefe.bala[balaActualEnemigo].posX = Jefe.posX + TAMANHO;
 		Jefe.bala[balaActualEnemigo].posY = Jefe.posY + TAMANHO;
+		Jefe.bala[balaActualEnemigo].posXNacimiento = Jefe.posX + TAMANHO;
+		Jefe.bala[balaActualEnemigo].posYNacimiento = Jefe.posY + TAMANHO;
 		Jefe.bala[balaActualEnemigo].activa = 1;
 
 		direccionBalaEnemigo = atan2(personaje.posY - Jefe.posY, personaje.posX - Jefe.posX); //atan2(y2 - y1, x2 - x1)
@@ -533,6 +567,11 @@ void DisparoEnemigos()
 		{
 			Jefe.bala[i].activa = 0;
 		}
+
+		if (Jefe.bala[i].posX > Jefe.bala[i].posXNacimiento + Jefe.rangoDeBalas || Jefe.bala[i].posX < Jefe.bala[i].posXNacimiento - Jefe.rangoDeBalas || Jefe.bala[i].posY > Jefe.bala[i].posYNacimiento + Jefe.rangoDeBalas || Jefe.bala[i].posY < Jefe.bala[i].posYNacimiento - Jefe.rangoDeBalas)
+		{
+			Jefe.bala[i].activa = 0;
+		}
 	}
 
 	/////////////////////////////////////////////////////////////// LOGICA MAGOS
@@ -547,6 +586,8 @@ void DisparoEnemigos()
 				{
 					mago[i].bala[j].posX = mago[i].posX;
 					mago[i].bala[j].posY = mago[i].posY;
+					mago[i].bala[j].posXNacimiento = mago[i].posX;
+					mago[i].bala[j].posYNacimiento = mago[i].posY;
 					mago[i].bala[j].activa = 1;
 
 					mago[i].bala[j].direccionBalaEnemigo = atan2(personaje.posY - mago[i].posY, personaje.posX - mago[i].posX); //atan2(y2 - y1, x2 - x1)
@@ -567,7 +608,6 @@ void DisparoEnemigos()
 		cadenciaEnemigo = 0;
 	}
 	
-
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
 		for (int j = 0; j < MAX_BALAS; j++)
@@ -587,7 +627,7 @@ void DisparoEnemigos()
 			}
 
 			//Destruccion de balas en funcion de la posicion del enemigo para que el arreglo nunca se acabe
-			if (mago[i].bala[j].posX > mago[i].posX + 1000 || mago[i].bala[j].posX < mago[i].posX - 1000 || mago[i].bala[j].posY > mago[i].posY + 1000 ||mago[i].bala[j].posY < mago[i].posY - 1000)
+			if (mago[i].bala[j].posX > mago[i].bala[j].posXNacimiento + mago[i].rangoDeBalas || mago[i].bala[j].posX < mago[i].bala[j].posXNacimiento - mago[i].rangoDeBalas || mago[i].bala[j].posY > mago[i].bala[j].posYNacimiento + mago[i].rangoDeBalas ||mago[i].bala[j].posY < mago[i].bala[j].posYNacimiento - mago[i].rangoDeBalas)
 			{
 				mago[i].bala[j].activa = 0;
 			}
@@ -662,7 +702,6 @@ void MovimientoJugador()
 
 void HandicapsMejorables()
 {
-
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 		if (personaje.bala[i].posX > personaje.bala[i].posXNacimiento + personaje.rangoDeBalas || personaje.bala[i].posX < personaje.bala[i].posXNacimiento - personaje.rangoDeBalas || personaje.bala[i].posY < personaje.bala[i].posYNacimiento - personaje.rangoDeBalas || personaje.bala[i].posY > personaje.bala[i].posYNacimiento + personaje.rangoDeBalas)
@@ -719,12 +758,21 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		monedas[i].activa = 0;
 		llaves[i].activa = 0;
 		cofres[i].activa = 0;
+		municiones[i].activa = 0;
 	}
 
 	mapaAzul.activa = 0;
 	mapaRojo.activa = 0;
 	mapaNaranjo.activa = 0;
 	mapaVerde.activa = 0;
+
+	//Reinicion Interactuables
+	for (int i = 0; i < MAX_INTERACTUABLES; i++)
+	{
+		fogata[i].activa = 0;
+	}
+
+	fogataActual = 0;
 	
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
@@ -747,6 +795,14 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				mapaAzul.posY = i * TAMANHO;
 			}
 
+			if (mapa[i][j] == 'f')
+			{
+				fogata[fogataActual].activa = 1;
+				fogata[fogataActual].posX = j * TAMANHO;
+				fogata[fogataActual].posY = i * TAMANHO;
+				fogataActual++;
+			}
+
 			if (mapa[i][j]=='v')
 			{
 				mapaVerde.activa = 1;
@@ -766,6 +822,13 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				mapaNaranjo.activa = 1;
 				mapaNaranjo.posX = j * TAMANHO;
 				mapaNaranjo.posY = i * TAMANHO;
+			}
+
+			if(mapa[i][j]=='R')
+			{
+				municiones[municionesActual].activa = 1;
+				municiones[municionesActual].posX = j * TAMANHO;
+				municiones[municionesActual].posY = i * TAMANHO;
 			}
 
 			if (mapa[i][j]=='C')
@@ -1016,16 +1079,47 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}*/
 
-			/*if (mapa[i][j] == 'a')
+			for (int k = 0; k < MAX_INTERACTUABLES; k++)
 			{
-				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}*/
+				if (mapa[i][j] == 'f' && fogata[k].fogataActiva == 0)
+				{
+					al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);
+				}
+				else if (mapa[i][j] == 'f' && fogata[k].fogataActiva != 0)
+				{
+					if (controlSprites >= 0 && controlSprites <= 10)
+					{
+						al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+					}
+					if (controlSprites >= 10 && controlSprites <= 20)
+					{
+						al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+					}
+					if (controlSprites >= 20 && controlSprites <= 30)
+					{
+						al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+					}
+					if (controlSprites >= 30 && controlSprites <= 40)
+					{
+						al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, ALLEGRO_FLIP_HORIZONTAL);	
+					}
+				}
+			}
 
 			if (mapa[i][j] == 'p')
 			{
 				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
+			if (mapa[i][j] == 'L')
+			{
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+			
+			if (mapa[i][j] == 'l')
+			{
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
 		}
 		printf("\n");
 	}
@@ -1052,7 +1146,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 	//Balas Jugador
 	al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, LARGO_PANTALLA - 350, ANCHO_PANTALLA - 200, TAMANHO * 3, TAMANHO * 3, 0); 
-	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", -balaActual + MAX_BALAS - 1, MAX_BALAS - 1);
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", -personaje.cantidadDeBalas + MAX_BALAS, MAX_BALAS);
 
 	//Puntaje Jugador
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 23, TAMANHO, 0, "Puntaje: %d", personaje.puntaje);
@@ -1061,6 +1155,13 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	for (int j = 0; j < personaje.vidas; j++)
 	{
 		al_draw_bitmap_region(spriteSheetIcons, 4 * TAMANHO, 134 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO + TAMANHO, TAMANHO / 2, 0);
+	}
+
+	//Cantidad de fogatas necesarias
+	if (actualMapaX == COLUMNAS_MAPA / 2 + 1 && actualMapaY == FILAS_MAPA / 2 + 1)
+	{
+		al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, TAMANHO + 100, TAMANHO * 5, 0);
+		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO + 200, TAMANHO * 5 + 20, 0, "%d/4", cantidadfogatasActivas);
 	}
 	
 	//Dibujo de balas
@@ -1175,8 +1276,6 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	AnimacionEnemigos(spriteSheet);
 	
 	//Puntero del mouse
-	//al_draw_filled_rectangle(mouse.posX - (mouse.tamanho/ 2), mouse.posY - (mouse.tamanho / 2), mouse.posX + (mouse.tamanho / 2), mouse.posY + (mouse.tamanho / 2), al_map_rgb(0, 255, 255));
-
 	al_draw_scaled_bitmap(spriteSheetCrosshair, 10 * 16, 3 * 16, 16, 16, mouse.posX - 30, mouse.posY - 32, TAMANHO, TAMANHO, 0);
 
 	////////////////////////////////////////////////
@@ -1201,6 +1300,11 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 	if(fila >= 0 && fila < FILAS_HABITACION && columna >= 0 && columna < COLUMNAS_HABITACION)
 	{
 		if(mapa[fila][columna] == '#')
+		{
+			return true;
+		}
+
+		if(mapa[fila][columna] == 'l')
 		{
 			return true;
 		}
@@ -1257,8 +1361,9 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.vidas = 3;
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 0;
-	personaje.cantidadLlaves = 0;
-	personaje.rangoDeBalas = 350;
+	personaje.cantidadLlaves = 2; //////////////// originalmente 0
+	personaje.rangoDeBalas = 400;
+	personaje.cantidadDeBalas = 0;
 
 	//Inicializando enemigos
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1284,6 +1389,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		mago[i].posXGeneracion = 0;
 		mago[i].posYGeneracion = 0;
 		mago[i].ataquesEnemigos = 0;
+		mago[i].rangoDeBalas = 450;
 
 		aranha[i].posX = 0;
 		aranha[i].posY = 0;
@@ -1309,6 +1415,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	Jefe.posXGeneracion = 0;
 	Jefe.posYGeneracion = 0;
 	Jefe.ataquesEnemigos = 0;
+	Jefe.rangoDeBalas = 500;
 
 	//Inicializando balas
 	for (int i = 0; i < MAX_BALAS; i++)
@@ -1373,6 +1480,15 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		{
 			mapa[i][j] = NULL;
 		}
+	}
+
+	//Interactuables inicializacion
+	for (int i = 0; i < MAX_INTERACTUABLES; i++)
+	{
+		fogata[i].activa = 0;
+		fogata[i].posX = 0;
+		fogata[i].posY = 0;
+		fogata[i].fogataActiva = 0;
 	}
 }
 
@@ -2313,7 +2429,7 @@ void ColicionObjetos()
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, municiones[i].posX, municiones[i].posY, TAMANHO, TAMANHO))
 			{
-				balaActual = 0;
+				personaje.cantidadDeBalas = 0;
 				municiones[i].activa = 0;
 			}
 		}
@@ -2437,6 +2553,21 @@ void ColicionObjetos()
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+void ColicionInteractuables()
+{
+	for (int i = 0; i < MAX_INTERACTUABLES; i++)
+	{
+		if (fogata[i].activa != 0  && fogata[i].fogataActiva == 0)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, fogata[i].posX, fogata[i].posY, TAMANHO, TAMANHO))
+			{
+				fogata[i].fogataActiva = 1;
+				cantidadfogatasActivas++;
 			}
 		}
 	}
