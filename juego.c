@@ -30,23 +30,25 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//haciendo un trial con trampas, minujuego de punteria
 //Pantalla desea jugar otra vez al terminar el juego
 
+//Arreglar aparicion dianas
+//reaparicion municiones
+//mejorar puertas con llaves
 //Arreglar generacion de arañas
-//mejorar sistema de generacion de salas
-//Mejorar diseño de las salas, un poco más leberinticas
-//Añadir más salas variadas
-//Puertas con llaves
-//trampas
+
+//Diseñar mejor las hab_generales e incluir más, siendo más laberinticas
+
+//IMPORTANTE
+//sistema ranking
 
 //Pedir Ayuda:
 //desenlazar balasActual y MAXBALAS
 
 //ideas:
+//trampas
 //añadir tipos de habitaciones (Tienda que provee power-ups)
 //sonidos y musica
-//habitacion de descanso donde salgan vidas y recargas
 //Enemigo que te persiga y dispare tres balas
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
@@ -851,13 +853,6 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				jugador->posY = i * TAMANHO;
 			}
 
-			if (mapa[i][j]=='a')
-			{
-				mapaAzul.activa = 1;
-				mapaAzul.posX = j * TAMANHO;
-				mapaAzul.posY = i * TAMANHO;
-			}
-
 			if (mapa[i][j] == 'f')
 			{
 				fogataEncendida = 0;
@@ -899,6 +894,14 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				seGeneroUnaRecompensa++;
 			}
 
+			//Cargar mapa azul
+			if (mapa[i][j]=='a' && mapaAzul.seObtuvo == 0)
+			{
+				mapaAzul.activa = 1;
+				mapaAzul.posX = j * TAMANHO;
+				mapaAzul.posY = i * TAMANHO;
+			}
+
 			//Cargar mapa verde
 			if (mapa[i][j]=='v')
 			{
@@ -916,7 +919,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			}
 
 			//Cargar mapa naranjo
-			if (mapa[i][j]=='n')
+			if (mapa[i][j]=='n' && mapaNaranjo.seObtuvo == 0)
 			{
 				mapaNaranjo.activa = 1;
 				mapaNaranjo.posX = j * TAMANHO;
@@ -1077,18 +1080,15 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				{
 					if(Jefe.activa == 0)
 					{
-						
 						Jefe.activa = 1;
 						Jefe.posX = j * TAMANHO;
 						Jefe.posY = i * TAMANHO;
 						Jefe.vida = 20;
-
 						
 						Jefe.posXGeneracion = j;
 						Jefe.posYGeneracion = i;
 					}
 				}
-
 			}
 
 			//cargar magos
@@ -2859,7 +2859,7 @@ void CambioDeHabitaciones()
 
 		personaje.traspasoPuerta = 0;
 	}
-	else if (mapa[actualMapaY][actualMapaX - 1] == NULL) //Las puertas que esten conectadas a una parte nula de mapa se reemplazan por #
+	else if (mapa[actualMapaY][actualMapaX - 1] == NULL || mapa[actualMapaY][actualMapaX - 1] == "hab_trial.txt") //Las puertas que esten conectadas a una parte nula de mapa se reemplazan por #
 	{
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
@@ -2883,7 +2883,7 @@ void CambioDeHabitaciones()
 		
 		personaje.traspasoPuerta = 0;
 	}
-	else if (mapa[actualMapaY][actualMapaX + 1] == NULL)
+	else if (mapa[actualMapaY][actualMapaX + 1] == NULL || mapa[actualMapaY][actualMapaX + 1] == "hab_trial.txt")
 	{
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
@@ -2908,7 +2908,7 @@ void CambioDeHabitaciones()
 		
 		personaje.traspasoPuerta = 0;
 	}
-	else if (mapa[actualMapaY + 1][actualMapaX] == NULL)
+	else if (mapa[actualMapaY + 1][actualMapaX] == NULL || mapa[actualMapaY + 1][actualMapaX] == "hab_trial.txt")
 	{
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
@@ -2991,13 +2991,14 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	int seGeneroUnaHabitacionRecompensa = 0;
 	int fogatasGeneradas = 0;
 	int seGeneroUnaHabitacioPunteria = 0;
+	int habitacionTrialGenerada = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 7 + 1;
+		auxRand = rand() % 8 + 1;
 
 		if (auxRand == 1)
 		{
@@ -3027,6 +3028,15 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		{
 			pullHabitaciones = "hab_punteria.txt";
 		}
+		if (auxRand == 8 && habitacionTrialGenerada == 0)
+		{
+			pullHabitaciones = "hab_trial.txt";
+		}
+
+		if (a >= cantidadHabitacionesDeseadas - 7 && habitacionTrialGenerada == 0)
+		{
+			pullHabitaciones = "hab_trial.txt";
+		}
 		
 		if (a >= cantidadHabitacionesDeseadas - 6 && seGeneroUnaHabitacioPunteria == 0)
 		{
@@ -3053,6 +3063,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 
 		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 
+		if (pullHabitaciones == "hab_trial.txt")
+		{
+			habitacionCardinal = 1;
+		}
+		
 		if (habitacionCardinal == 1)
 		{
 			if (mapa[filaActual - 1][columnaActual] == NULL)
@@ -3078,6 +3093,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				if (pullHabitaciones == "hab_punteria.txt")
 				{
 					seGeneroUnaHabitacioPunteria++;
+				}
+
+				if (pullHabitaciones == "hab_trial.txt")
+				{
+					habitacionTrialGenerada++;
 				}
 
 				printf("Habitacion 1 generada");
