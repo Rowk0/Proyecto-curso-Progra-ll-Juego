@@ -19,6 +19,7 @@
 #define MAX_ENEMIGOS 20
 #define MAX_OBJETOS 100
 #define MAX_INTERACTUABLES 10
+#define MAX_REGISTROS 1000
 
 //Ideas deshechadas: 
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
@@ -28,7 +29,7 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//habrá diferentes maneras de recoger los orbes, una eliminando un jefe, una haciendo un puzzle, haciendo un trial con trampas, un minujuego de punteria
+//haciendo un trial con trampas, minujuego de punteria
 //Pantalla desea jugar otra vez al terminar el juego
 
 //Arreglar generacion de arañas
@@ -176,7 +177,7 @@ typedef struct
 	int mapaY;
 } registroMuertes_;
 
-registroMuertes_ registroMuertes[1000];
+registroMuertes_ registroMuertes[MAX_REGISTROS];
 
 int cantidadMuertos = 0;
 
@@ -188,9 +189,22 @@ typedef struct
 	int seAbrioUnCofre;
 } registroRecompensas_;
 
-registroRecompensas_ registroRecompensas[1000];
+registroRecompensas_ registroRecompensas[MAX_REGISTROS];
 
 int cantidadRecompensas = 0;
+
+typedef struct 
+{
+	int mapaX;
+	int mapaY;
+	int fila;
+	int columna;
+	int fogataEncendida;
+} registroInteractuables_;
+
+registroInteractuables_ registroInteractuables[MAX_REGISTROS];
+
+int cantidadInteractuables = 0;
 
 typedef struct 
 {
@@ -235,6 +249,8 @@ typedef struct
 {
 	int posX;
 	int posY;
+	int fila;
+	int columna;
 	int activa;
 	int fogataActiva;
 } interactuables;
@@ -468,7 +484,6 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 		}
 	}
 	
-
 	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
 	{
@@ -715,6 +730,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 {
 	int muerto = 0;
 	int cofreAbierto = 0;
+	int fogataEncendida = 0;
 	slimeActual = 0;
 	salaVacia = 0;
 	seGeneroUnaRecompensa = 0;
@@ -766,10 +782,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	mapaNaranjo.activa = 0;
 	mapaVerde.activa = 0;
 
-	//Reinicion Interactuables
+	//Reinicio Interactuables
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
 	{
 		fogata[i].activa = 0;
+		fogata[i].fogataActiva = 0;
 	}
 
 	fogataActual = 0;
@@ -797,10 +814,43 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 			if (mapa[i][j] == 'f')
 			{
-				fogata[fogataActual].activa = 1;
-				fogata[fogataActual].posX = j * TAMANHO;
-				fogata[fogataActual].posY = i * TAMANHO;
-				fogataActual++;
+				fogataEncendida = 0;
+
+				for (int k = 0; k < MAX_REGISTROS; k++)
+				{
+					if (registroInteractuables[k].mapaX == actualMapaX && registroInteractuables[k].mapaY == actualMapaY && registroInteractuables[k].fogataEncendida == 1 && registroInteractuables[k].fila == i && registroInteractuables[k].columna == j)
+					{
+						fogataEncendida = 1;
+						break;
+					}
+				}
+				
+				if (fogataEncendida == 0)
+				{
+					fogata[fogataActual].activa = 1;
+					fogata[fogataActual].posX = j * TAMANHO;
+					fogata[fogataActual].posY = i * TAMANHO;
+					fogata[fogataActual].fila = i;
+					fogata[fogataActual].columna = j;
+					fogataActual++;
+				}
+				else
+				{
+					fogata[fogataActual].activa = 1;
+					fogata[fogataActual].fogataActiva = 1;
+					fogata[fogataActual].posX = j * TAMANHO;
+					fogata[fogataActual].posY = i * TAMANHO;
+					fogata[fogataActual].fila = i;
+					fogata[fogataActual].columna = j;
+					fogataActual++;	
+				}
+
+				if (fogataActual >= MAX_INTERACTUABLES)
+				{
+					fogataActual = 0;
+				}
+				
+				seGeneroUnaRecompensa++;
 			}
 
 			if (mapa[i][j]=='v')
@@ -955,18 +1005,17 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 					}
 				}
 				
-				//Si el slime no esta muerto se genera
 				if (muerto == 0)
 				{
 					if(Jefe.activa == 0)
 					{
-						//Generar slime en la posicion 's' del mapa
+						
 						Jefe.activa = 1;
 						Jefe.posX = j * TAMANHO;
 						Jefe.posY = i * TAMANHO;
 						Jefe.vida = 20;
 
-						//Registrar la ubicacion original del slime
+						
 						Jefe.posXGeneracion = j;
 						Jefe.posYGeneracion = i;
 					}
@@ -1059,25 +1108,8 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 		{
 			if (mapa[i][j] == '#')
 			{
-				//al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-
 				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
-
-			/*if (mapa[i][j] == '.')
-			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}*/
-
-			/*if (mapa[i][j] == '@')
-			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}*/
-
-			/*if (mapa[i][j] == 's')
-			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
-			}*/
 
 			for (int k = 0; k < MAX_INTERACTUABLES; k++)
 			{
@@ -2568,6 +2600,15 @@ void ColicionInteractuables()
 			{
 				fogata[i].fogataActiva = 1;
 				cantidadfogatasActivas++;
+
+				registroInteractuables[cantidadInteractuables].mapaX = actualMapaX;
+				registroInteractuables[cantidadInteractuables].mapaY = actualMapaY;
+				registroInteractuables[cantidadInteractuables].fila = fogata[i].fila;
+				registroInteractuables[cantidadInteractuables].columna = fogata[i].columna;
+				registroInteractuables[cantidadInteractuables].fogataEncendida = 1;
+				cantidadInteractuables++;
+
+				break;
 			}
 		}
 	}
@@ -2762,13 +2803,14 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	char *pullHabitaciones;
 	int auxRand = 0;
 	int seGeneroUnaHabitacionRecompensa = 0;
+	int fogatasGeneradas = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 5 + 1;
+		auxRand = rand() % 6 + 1;
 
 		if (auxRand == 1)
 		{
@@ -2786,19 +2828,27 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		{
 			pullHabitaciones = "hab_general_4.txt";  
 		}
-		if (auxRand == 5 && seGeneroUnaHabitacionRecompensa == 0)
+		if (auxRand == 5)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
-			seGeneroUnaHabitacionRecompensa ++;
+		}
+		if (auxRand == 6)
+		{
+			pullHabitaciones = "hab_fogata.txt";
+		}
+
+		if (a == cantidadHabitacionesDeseadas - 5 && fogatasGeneradas != 3)
+		{
+			pullHabitaciones = "hab_fogata.txt"	;
 		}
 		
+		//La penultima habitacion generada siempre sera una sala de recompensa si no se genero antes
 		if (a == cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
 			seGeneroUnaHabitacionRecompensa ++;
 		}
 		
-
 		//Cuando este por generar la ultima habitacion, obliga a que sea la del jefe
 		if (a == cantidadHabitacionesDeseadas - 1)
 		{
@@ -2817,6 +2867,17 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
 				a ++;
+
+				//Verificacion de salas importantes
+				if (pullHabitaciones == "hab_fogata.txt")
+				{
+					fogatasGeneradas++;
+				}
+				
+				if (pullHabitaciones == "hab_recompensa.txt")
+				{
+					seGeneroUnaHabitacionRecompensa++;
+				}
 
 				printf("Habitacion 1 generada");
 			}
@@ -2837,6 +2898,17 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
 				a ++;
 
+				//Verificacion de salas importantes
+				if (pullHabitaciones == "hab_fogata.txt")
+				{
+					fogatasGeneradas++;
+				}
+				
+				if (pullHabitaciones == "hab_recompensa.txt")
+				{
+					seGeneroUnaHabitacionRecompensa++;
+				}
+
 				printf("Habitacion 3 generada");
 			}
 			else
@@ -2856,6 +2928,17 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
 				a ++;
 
+				//Verificacion de salas importantes
+				if (pullHabitaciones == "hab_fogata.txt")
+				{
+					fogatasGeneradas++;
+				}
+				
+				if (pullHabitaciones == "hab_recompensa.txt")
+				{
+					seGeneroUnaHabitacionRecompensa++;
+				}
+
 				printf("Habitacion 2 generada");
 			}
 			else
@@ -2874,6 +2957,17 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				filaActual = FILAS_MAPA / 2 + 1;
 				columnaActual = COLUMNAS_MAPA / 2 + 1;
 				a ++;
+
+				//Verificacion de salas importantes
+				if (pullHabitaciones == "hab_fogata.txt")
+				{
+					fogatasGeneradas++;
+				}
+				
+				if (pullHabitaciones == "hab_recompensa.txt")
+				{
+					seGeneroUnaHabitacionRecompensa++;
+				}
 
 				printf("Habitacion 4 generada");
 			}
