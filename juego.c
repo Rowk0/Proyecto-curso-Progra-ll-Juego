@@ -30,10 +30,14 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
+//git: fondo menu añadido, solucion reaparicion objeto cargador, añadido pantalla de reinicio una vez terminas el juego, 
+
 //Pantalla desea jugar otra vez al terminar el juego
 
-//Arreglar aparicion dianas
-//reaparicion municiones
+//Separar en funciones cargar mapa, sprites, colisiones
+//registrar muertes aranhas
+//Arreglar generacion de fogatas y dianas, aparecen más de lo que deberia
+//Arreglar reaparicion de dianas una vez destruidas
 //mejorar puertas con llaves
 //Arreglar generacion de arañas
 
@@ -42,12 +46,13 @@
 //IMPORTANTE
 //sistema ranking
 
-//Pedir Ayuda:
-//desenlazar balasActual y MAXBALAS
-
 //ideas:
 //trampas
 //añadir tipos de habitaciones (Tienda que provee power-ups)
+
+//Ultimo
+//dos jugadores
+//Joystick
 //sonidos y musica
 //Enemigo que te persiga y dispare tres balas
 
@@ -205,8 +210,11 @@ typedef struct
 {
 	int mapaX;
 	int mapaY;
+	int fila;
+	int columna;
 	int seObtuvoUnaRecompensa;
 	int seAbrioUnCofre;
+	int seObtuvoUnCargador;
 } registroRecompensas_;
 
 registroRecompensas_ registroRecompensas[MAX_REGISTROS];
@@ -234,6 +242,8 @@ typedef struct
 	int especial;
 	int cofreAbierto;
 	int seObtuvo;
+	int fila;
+	int columna;
 } objeto;
 
 objeto monedas[MAX_OBJETOS];
@@ -300,6 +310,10 @@ int actualMapaY = FILAS_MAPA / 2 + 1;
 //Cuando JUEGO = 0, el while termina y se cierra el programa
 int JUEGO = 0;
 int MENU = 1;
+int REINICIAR = 0;
+int SISTEMA = 1;
+
+//ESTRUCTURA JUEGO/////////////////////////////////////////////////////////////////////// estado de juego
 
 //Control de sprites del personaje
 int controlSprites = 0;
@@ -330,7 +344,7 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 void ColisionEnemigos();
 void CambioDeHabitaciones();
-void RenderMenu(ALLEGRO_FONT *fuenteJuego);
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneraciónDelMapa(int cantidadHabitacionesDeseadas);
@@ -344,6 +358,8 @@ void VerificarSalaVacia();
 void GeneracionDeRecompensas();
 void ColicionInteractuables();
 void LogicaDianas();
+void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
+void LogicaReiniciar();
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -368,60 +384,77 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *spriteSheetIcons;
 	ALLEGRO_BITMAP *spriteSheetCrosshair;
 	ALLEGRO_BITMAP *spriteSheetBalasEnemigos;
+	ALLEGRO_BITMAP *menuFondo;
 
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
 	
 	///////////////////////////////////////////////////////////////
 
-	InitAllegro();
+	while (SISTEMA)
+	{
+		InitAllegro();
 	
-	InitGameComponents(ventana, &mouse);
+		InitGameComponents(ventana, &mouse);
 
-	srand(time(NULL));
+		srand(time(NULL));
 
-	GeneraciónDelMapa(10);
+		GeneraciónDelMapa(10);
 
-	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
+		fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
-	while (MENU)
-	{
-		InputHandle();
+		menuFondo = al_load_bitmap("menu_fondo.png");
 
-		RenderMenu(fuenteJuego);
+		while (MENU)
+		{
+			InputHandle();
 
-		LogicaMenu();
+			RenderMenu(fuenteJuego, menuFondo);
 
-		al_rest(0.016);
-	}
+			LogicaMenu();
 
-	cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
+			al_rest(0.016);
+		}
 
-	spriteSheet = al_load_bitmap("64x64.png");
+		cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
 
-	spriteSheetBalas = al_load_bitmap("sp_guns.png");
+		spriteSheet = al_load_bitmap("64x64.png");
 
-	spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
+		spriteSheetBalas = al_load_bitmap("sp_guns.png");
 
-	spriteSheetIcons = al_load_bitmap("64x64_icons.png");
+		spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
 
-	spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
+		spriteSheetIcons = al_load_bitmap("64x64_icons.png");
 
-	spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
+		spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
 
-	while (JUEGO)
-	{
-		//Funcion que actualiza el estado del teclado y mouse
-		InputHandle();
+		spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
 
-		//Logica del juego. Ej: movimientos del jugador
-		Logica(sala, &personaje);
+		while (JUEGO)
+		{
+			//Funcion que actualiza el estado del teclado y mouse
+			InputHandle();
 
-		//Dibujar aqui
-		Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos);
+			//Logica del juego. Ej: movimientos del jugador
+			Logica(sala, &personaje);
 
-		//Hacer descansar el cpu
-		al_rest(0.016); 
+			//Dibujar aqui
+			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos);
+
+			//Hacer descansar el cpu
+			al_rest(0.016); 
+		}
+
+		while (REINICIAR)
+		{
+			InputHandle();
+
+			RenderReiniciar(fuenteJuego);
+
+			LogicaReiniciar();
+
+			al_rest(0.016);
+		}
 	}
 
 	return 0;
@@ -439,14 +472,41 @@ void LogicaMenu()
 	}
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego)
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo)
 {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 
-	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(255, 255, 255));
+	al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+	
+	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
 
 	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Jugar");
+
+	////////////////////////////////////////////////
+	al_flip_display();
+}
+
+void LogicaReiniciar()
+{
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO))
+	{
+		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+		{
+			MENU = 1;
+			REINICIAR = 0;
+		}
+	}
+}
+
+void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
+{
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	//////////////////////////////////////////////// Dibujar en este espacio
+	
+	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
+
+	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Reiniciar");
 
 	////////////////////////////////////////////////
 	al_flip_display();
@@ -483,10 +543,11 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	//Axis del mouse
 	al_get_mouse_num_axes();
 
-	//TERMINAR EL PRIMER NIVEL
-	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1)
+	//TERMINAR EL JUEGO
+	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1 && REINICIAR == 0)
 	{
 		JUEGO = 0;
+		REINICIAR = 1;
 	}
 
 	//Verificar evento de dianas
@@ -530,6 +591,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	if (personaje.vidas == 0)
 	{
 		JUEGO = 0;
+		REINICIAR = 1;
 	}
 }
 
@@ -773,9 +835,13 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	int muerto = 0;
 	int cofreAbierto = 0;
 	int fogataEncendida = 0;
+	int cargadorObtenido = 0;
+	aranhaActual = 0;
+	magoActual = 0;
 	slimeActual = 0;
 	salaVacia = 0;
 	seGeneroUnaRecompensa = 0;
+	dianasActuales = 0;
 
 	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
 	{
@@ -839,6 +905,8 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		dianas[i].activa = 0;
 	}
 	
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	for (int i = 0; i < FILAS_HABITACION; i++) 
 	{
     	for (int j = 0; j < COLUMNAS_HABITACION; j++) 
@@ -929,27 +997,45 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//Cargar municiones
 			if(mapa[i][j]=='R')
 			{
-				municiones[municionesActual].activa = 1;
-				municiones[municionesActual].posX = j * TAMANHO;
-				municiones[municionesActual].posY = i * TAMANHO;
-				municionesActual++;
+				cargadorObtenido = 0;
+
+				for (int k = 0; k < MAX_REGISTROS; k++)
+				{
+					if (registroRecompensas[k].mapaX == actualMapaX && registroRecompensas[k].mapaY == mapaY && registroRecompensas[k].fila == i && registroRecompensas[k].columna == j && registroRecompensas[k].seObtuvoUnCargador == 1)
+					{
+						cargadorObtenido = 1;
+					}
+					
+				}
+				
+				if (cargadorObtenido == 0)
+				{
+					municiones[municionesActual].activa = 1;
+					municiones[municionesActual].posX = j * TAMANHO;
+					municiones[municionesActual].posY = i * TAMANHO;
+					municiones[municionesActual].fila = i;
+					municiones[municionesActual].columna = j;
+					municionesActual++;
+				}
 			}
 
 			if (mapa[i][j] == 'D')
 			{
-				dianas[dianasActuales].posX = j * TAMANHO;
-				dianas[dianasActuales].posY = i * TAMANHO;
-				dianas[dianasActuales].activa = 1;
-				dianasActuales++;
+				if (dianas[dianasActuales].destruida == 0)
+				{
+					dianas[dianasActuales].posX = j * TAMANHO;
+					dianas[dianasActuales].posY = i * TAMANHO;
+					dianas[dianasActuales].activa = 1;
+					dianasActuales++;
 
-				seGeneroUnaRecompensa++;
+					seGeneroUnaRecompensa++;
+				}
 			}
 
 			if (dianasActuales >= MAX_DIANAS)
 			{
 				dianasActuales = 0;
 			}
-			
 
 			//Cargar cofres
 			if (mapa[i][j]=='C')
@@ -1489,6 +1575,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
 	personaje.cantidadDeBalas = 0;
+	personaje.puntaje = 0;
 
 	//Inicializando enemigos
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -1599,8 +1686,38 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 
 		mejoraVelocidad[i].activa = 0;
 	}
-	
+
+	mapaVerde.activa = 0;
+	mapaVerde.columna = 0;
+	mapaVerde.fila = 0;
+	mapaVerde.posX = 0;
+	mapaVerde.posY = 0;
+	mapaVerde.seObtuvo = 0;
 	mapaVerde.especial = 0;
+
+	mapaAzul.activa = 0;
+	mapaAzul.columna = 0;
+	mapaAzul.fila = 0;
+	mapaAzul.posX = 0;
+	mapaAzul.posY = 0;
+	mapaAzul.seObtuvo = 0;
+	mapaAzul.especial = 0;
+
+	mapaNaranjo.activa = 0;
+	mapaNaranjo.columna = 0;
+	mapaNaranjo.fila = 0;
+	mapaNaranjo.posX = 0;
+	mapaNaranjo.posY = 0;
+	mapaNaranjo.seObtuvo = 0;
+	mapaNaranjo.especial = 0;
+
+	mapaRojo.activa = 0;
+	mapaRojo.columna = 0;
+	mapaRojo.fila = 0;
+	mapaRojo.posX = 0;
+	mapaRojo.posY = 0;
+	mapaRojo.seObtuvo = 0;
+	mapaRojo.especial = 0;
 
 	//Inicializar mapa
 	for (int i = 0; i < FILAS_MAPA; i++)
@@ -1618,7 +1735,12 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		fogata[i].posX = 0;
 		fogata[i].posY = 0;
 		fogata[i].fogataActiva = 0;
+		fogata[i].columna = 0;
+		fogata[i].fila = 0;
 	}
+
+	cantidadfogatasActivas = 0;
+	fogataActual = 0;
 
 	//Dianas inicializacion
 	for (int i = 0; i < MAX_DIANAS; i++)
@@ -1627,8 +1749,31 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		dianas[i].velocidad = 10;
 		dianas[i].chocoConPared = 0;
 		dianas[i].auxRanDianas = 0;
+		dianas[i].destruida = 0;
 	}
-	
+
+	//Inicializacion registros
+	for (int i = 0; i < MAX_REGISTROS; i++)
+	{
+		registroMuertes[i].columna = 0;
+		registroMuertes[i].fila = 0;
+		registroMuertes[i].mapaX = 0;
+		registroMuertes[i].mapaY = 0;
+		
+		registroInteractuables[i].columna = 0;
+		registroInteractuables[i].fila = 0;
+		registroInteractuables[i].fogataEncendida = 0;
+		registroInteractuables[i].mapaX = 0;
+		registroInteractuables[i].mapaY = 0;
+
+		registroRecompensas[i].columna = 0;
+		registroRecompensas[i].fila = 0;
+		registroRecompensas[i].mapaX = 0;
+		registroRecompensas[i].mapaY = 0;
+		registroRecompensas[i].seAbrioUnCofre = 0;
+		registroRecompensas[i].seObtuvoUnaRecompensa = 0;
+		registroRecompensas[i].seObtuvoUnCargador = 0;
+	}
 }
 
 void InputHandle()
@@ -1644,6 +1789,8 @@ void InputHandle()
 	{
 		JUEGO = 0;
 		MENU = 0;
+		REINICIAR = 0;
+		SISTEMA = 0;
 	}
 }
 
@@ -2570,6 +2717,13 @@ void ColicionObjetos()
 			{
 				personaje.cantidadDeBalas = 0;
 				municiones[i].activa = 0;
+
+				registroRecompensas[cantidadRecompensas].mapaX = actualMapaX;
+				registroRecompensas[cantidadRecompensas].mapaY = actualMapaY;
+				registroRecompensas[cantidadRecompensas].fila = municiones[i].fila;
+				registroRecompensas[cantidadRecompensas].columna = municiones[i].columna;
+				registroRecompensas[cantidadRecompensas].seObtuvoUnCargador = 1;
+				cantidadRecompensas;
 			}
 		}
 
