@@ -8,8 +8,8 @@
 #include <allegro5/allegro_ttf.h>
 #define FILAS_HABITACION 17
 #define COLUMNAS_HABITACION 30
-#define FILAS_MAPA 7
-#define COLUMNAS_MAPA 7
+#define FILAS_MAPA 9
+#define COLUMNAS_MAPA 9
 #define TAMANHO 64
 #define LARGO_TEXTO 30
 #define LARGO_SPRITES 30
@@ -30,7 +30,7 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//git: fondo menu añadido, solucion reaparicion objeto cargador, añadido pantalla de reinicio una vez terminas el juego, 
+//git: 
 
 //Pantalla desea jugar otra vez al terminar el juego
 
@@ -71,14 +71,6 @@
 
 ////////////////////////////////////////////////////////////////// Estructuras
 
-struct dirBala_
-{
-	int derecha;
-	int izquierda;
-	int abajo;
-	int arriba;
-};
-
 //Control de balas
 int balaActual = 0;
 int balaActualEnemigo = 0;
@@ -98,7 +90,6 @@ typedef	struct
 	int velocidad;
 	int activa; 
 	int danho;
-	struct dirBala_ dirBala;
 	float anguloBalaX;
 	float anguloBalaY;
 	float direccionBalaEnemigo;
@@ -236,6 +227,20 @@ int cantidadInteractuables = 0;
 
 typedef struct 
 {
+	int mapaX;
+	int mapaY;
+	int fila;
+	int columna;
+	int idObjeto;
+	int comprado;
+} registroTienda_;
+
+registroTienda_ registroTienda[MAX_REGISTROS];
+
+int indiceTienda = 0;
+
+typedef struct 
+{
 	int posX;
 	int posY;
 	int activa;
@@ -244,6 +249,9 @@ typedef struct
 	int seObtuvo;
 	int fila;
 	int columna;
+	int seVende;
+	int precio;
+	int idRegistro;
 } objeto;
 
 objeto monedas[MAX_OBJETOS];
@@ -263,8 +271,11 @@ objeto mejoraRango[MAX_OBJETOS];
 objeto mejoraVelocidad[MAX_OBJETOS];
 
 objeto mapaRojo;
+
 objeto mapaVerde;
+
 objeto mapaAzul;
+
 objeto mapaNaranjo;
 
 int monedasActual = 0;
@@ -273,6 +284,8 @@ int cofreActual = 0;
 int municionesActual = 0;
 int vidasObjetoActual = 0;
 int mejoraDanhoActual = 0;
+int mejoraRangoActual = 0;
+int mejoraVelocidadActual = 0;
 
 //Interactuables
 typedef struct 
@@ -399,7 +412,7 @@ int main(int argc, char **argv)
 
 		srand(time(NULL));
 
-		GeneraciónDelMapa(10);
+		GeneraciónDelMapa(10); //9
 
 		fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
@@ -836,9 +849,14 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	int cofreAbierto = 0;
 	int fogataEncendida = 0;
 	int cargadorObtenido = 0;
+	int auxRandTienda = 0;
+	int productoTiendaGenerado = 0;
 	aranhaActual = 0;
 	magoActual = 0;
 	slimeActual = 0;
+	mejoraDanhoActual = 0;
+	mejoraRangoActual = 0;
+	mejoraVelocidadActual = 0;
 	salaVacia = 0;
 	seGeneroUnaRecompensa = 0;
 	dianasActuales = 0;
@@ -883,6 +901,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		llaves[i].activa = 0;
 		cofres[i].activa = 0;
 		municiones[i].activa = 0;
+		mejoraDanho[i].activa = 0;
+		mejoraRango[i].activa = 0;
+		mejoraVelocidad[i].activa = 0;
 	}
 
 	mapaAzul.activa = 0;
@@ -921,6 +942,120 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				jugador->posY = i * TAMANHO;
 			}
 
+			if (mapa[i][j] == '+')
+			{
+				productoTiendaGenerado = 0;
+				
+				for (int k = 0; k < MAX_REGISTROS; k++)
+				{
+					if (registroTienda[k].columna == j && registroTienda[k].fila == i && registroTienda[k].mapaX == actualMapaX && registroTienda[k].mapaY == actualMapaY)
+					{
+						productoTiendaGenerado = 1;
+
+						if (registroTienda[k].idObjeto == 1 && registroTienda[k].comprado == 0)
+						{
+							mejoraDanho[mejoraDanhoActual].activa = 1;
+							mejoraDanho[mejoraDanhoActual].posX = j * TAMANHO;
+							mejoraDanho[mejoraDanhoActual].posY = i * TAMANHO - 30;
+							mejoraDanho[mejoraDanhoActual].fila = i;
+							mejoraDanho[mejoraDanhoActual].columna = j;
+							mejoraDanho[mejoraDanhoActual].seVende = 1;
+							mejoraDanho[mejoraDanhoActual].precio = 10;
+							mejoraDanhoActual++;
+						}
+						else if (registroTienda[k].idObjeto == 2 && registroTienda[k].comprado == 0)
+						{
+							mejoraRango[mejoraRangoActual].activa = 1;
+							mejoraRango[mejoraRangoActual].posX = j * TAMANHO;
+							mejoraRango[mejoraRangoActual].posY = i * TAMANHO - 30;
+							mejoraRango[mejoraRangoActual].fila = i;
+							mejoraRango[mejoraRangoActual].columna = j;
+							mejoraRango[mejoraRangoActual].seVende = 1;
+							mejoraRango[mejoraRangoActual].precio = 15;
+							mejoraRangoActual++;
+						}
+						else if (registroTienda[k].idObjeto == 3 && registroTienda[k].comprado == 0)
+						{
+							mejoraVelocidad[mejoraVelocidadActual].activa = 1;
+							mejoraVelocidad[mejoraVelocidadActual].posX = j * TAMANHO;
+							mejoraVelocidad[mejoraVelocidadActual].posY = i * TAMANHO - 30;
+							mejoraVelocidad[mejoraVelocidadActual].fila = i;
+							mejoraVelocidad[mejoraVelocidadActual].columna = j;
+							mejoraVelocidad[mejoraVelocidadActual].seVende = 1;
+							mejoraVelocidad[mejoraVelocidadActual].precio = 10;
+							mejoraVelocidadActual++;
+						}
+
+						break;
+					}
+				}
+				
+				if (productoTiendaGenerado == 0)
+				{
+					auxRandTienda = rand() % 3 + 1;
+
+					if (auxRandTienda == 1)
+					{
+						mejoraDanho[mejoraDanhoActual].activa = 1;
+						mejoraDanho[mejoraDanhoActual].posX = j * TAMANHO;
+						mejoraDanho[mejoraDanhoActual].posY = i * TAMANHO - 30;
+						mejoraDanho[mejoraDanhoActual].seVende = 1;
+						mejoraDanho[mejoraDanhoActual].precio = 10;
+						mejoraDanho[mejoraDanhoActual].idRegistro = indiceTienda;
+						mejoraDanhoActual++;
+
+						registroTienda[indiceTienda].columna = j;
+						registroTienda[indiceTienda].fila = i;
+						registroTienda[indiceTienda].mapaX = actualMapaX;
+						registroTienda[indiceTienda].mapaY = actualMapaY;
+						registroTienda[indiceTienda].idObjeto = 1;
+						registroTienda[indiceTienda].comprado = 0;
+						indiceTienda++;
+					}
+					else if (auxRandTienda == 2)
+					{
+						mejoraRango[mejoraRangoActual].activa = 1;
+						mejoraRango[mejoraRangoActual].posX = j * TAMANHO;
+						mejoraRango[mejoraRangoActual].posY = i * TAMANHO - 30;
+						mejoraRango[mejoraRangoActual].seVende = 1;
+						mejoraRango[mejoraRangoActual].precio = 15;
+						mejoraRango[mejoraRangoActual].idRegistro = indiceTienda;
+						mejoraRangoActual++;
+
+						registroTienda[indiceTienda].columna = j;
+						registroTienda[indiceTienda].fila = i;
+						registroTienda[indiceTienda].mapaX = actualMapaX;
+						registroTienda[indiceTienda].mapaY = actualMapaY;
+						registroTienda[indiceTienda].idObjeto = 2;
+						registroTienda[indiceTienda].comprado = 0;
+						indiceTienda++;
+					}
+					else if (auxRandTienda == 3)
+					{
+						mejoraVelocidad[mejoraVelocidadActual].activa = 1;
+						mejoraVelocidad[mejoraVelocidadActual].posX = j * TAMANHO;
+						mejoraVelocidad[mejoraVelocidadActual].posY = i * TAMANHO - 30;
+						mejoraVelocidad[mejoraVelocidadActual].seVende = 1;
+						mejoraVelocidad[mejoraVelocidadActual].precio = 10;
+						mejoraVelocidad[mejoraVelocidadActual].idRegistro = indiceTienda;
+						mejoraVelocidadActual++;
+
+						registroTienda[indiceTienda].columna = j;
+						registroTienda[indiceTienda].fila = i;
+						registroTienda[indiceTienda].mapaX = actualMapaX;
+						registroTienda[indiceTienda].mapaY = actualMapaY;
+						registroTienda[indiceTienda].idObjeto = 3;
+						registroTienda[indiceTienda].comprado = 0;
+						indiceTienda++;
+					}
+				}
+			}
+
+			if (mapa[i][j] == 'T')
+			{
+				seGeneroUnaRecompensa++;
+			}
+			
 			if (mapa[i][j] == 'f')
 			{
 				fogataEncendida = 0;
@@ -1004,8 +1139,8 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 					if (registroRecompensas[k].mapaX == actualMapaX && registroRecompensas[k].mapaY == mapaY && registroRecompensas[k].fila == i && registroRecompensas[k].columna == j && registroRecompensas[k].seObtuvoUnCargador == 1)
 					{
 						cargadorObtenido = 1;
+						break;
 					}
-					
 				}
 				
 				if (cargadorObtenido == 0)
@@ -1265,6 +1400,21 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
+			if (mapa[i][j] == 'T')
+			{
+				al_draw_bitmap_region(spriteSheet, 7 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == '+')
+			{
+				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'E' || mapa[i][j] == 'O' || mapa[i][j] == 'N' || mapa[i][j] == 'S')
+			{
+				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+			
 			for (int k = 0; k < MAX_INTERACTUABLES; k++)
 			{
 				if (mapa[i][j] == 'f' && fogata[k].fogataActiva == 0)
@@ -1402,7 +1552,6 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		}
 	}
 	
-
 	//Dibujo de objetos
 	for (int i = 0; i < MAX_OBJETOS; i++)
 	{
@@ -1481,6 +1630,28 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	if (mapaVerde.activa != 0)
 	{
 		al_draw_bitmap_region(spriteSheetIcons, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, mapaVerde.posX, mapaVerde.posY, 0);
+	}
+
+	//Dibujo objetos de tienda
+	for (int i = 0; i < MAX_OBJETOS; i++)
+	{
+		if (mejoraDanho[i].activa == 1 && mejoraDanho[i].seVende == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 0 * TAMANHO, 83 * TAMANHO, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, 0);
+			al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), mejoraDanho[i].posX, mejoraDanho[i].posY + 100, 0, "%d", mejoraDanho[i].precio);
+		}
+
+		if (mejoraRango[i].activa == 1 && mejoraRango[i].seVende == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 2 * TAMANHO, 83 * TAMANHO, TAMANHO, TAMANHO, mejoraRango[i].posX, mejoraRango[i].posY, 0);
+			al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), mejoraRango[i].posX, mejoraRango[i].posY + 100, 0, "%d", mejoraRango[i].precio);
+		}
+
+		if (mejoraVelocidad[i].activa == 1 && mejoraVelocidad[i].seVende == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 1 * TAMANHO, 85 * TAMANHO, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, 0);
+			al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), mejoraVelocidad[i].posX, mejoraVelocidad[i].posY + 100, 0, "%d", mejoraVelocidad[i].precio);
+		}
 	}
 	
 	//Dibujo enemigos
@@ -1571,7 +1742,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	personaje.dirJugador.izquierda = 1;
 	personaje.vidas = 6;
 	personaje.invulnerable = 0;
-	personaje.cantidadMonedas = 0;
+	personaje.cantidadMonedas = 200;
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
 	personaje.cantidadDeBalas = 0;
@@ -1636,10 +1807,6 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		personaje.bala[i].posY = 0;
 		personaje.bala[i].velocidad = 10;
 		personaje.bala[i].activa = 0;
-		personaje.bala[i].dirBala.abajo = 0;
-		personaje.bala[i].dirBala.arriba = 0;
-		personaje.bala[i].dirBala.derecha = 0;
-		personaje.bala[i].dirBala.izquierda = 0;
 		personaje.bala[i].danho = 3;               ///// originalmente 1
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
@@ -1648,10 +1815,6 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 		Jefe.bala[i].posY = 0;
 		Jefe.bala[i].velocidad = 10;
 		Jefe.bala[i].activa = 0;
-		Jefe.bala[i].dirBala.abajo = 0;
-		Jefe.bala[i].dirBala.arriba = 0;
-		Jefe.bala[i].dirBala.derecha = 0;
-		Jefe.bala[i].dirBala.izquierda = 0;
 		Jefe.bala[i].danho = 1;
 		Jefe.bala[i].anguloBalaX = 0;
 		Jefe.bala[i].anguloBalaY = 0;
@@ -1662,10 +1825,6 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 			mago[m].bala[i].posY = 0;
 			mago[m].bala[i].velocidad = 10;
 			mago[m].bala[i].activa = 0;
-			mago[m].bala[i].dirBala.abajo = 0;
-			mago[m].bala[i].dirBala.arriba = 0;
-			mago[m].bala[i].dirBala.derecha = 0;
-			mago[m].bala[i].dirBala.izquierda = 0;
 			mago[m].bala[i].danho = 1;
 			mago[m].bala[i].anguloBalaX = 0;
 			mago[m].bala[i].anguloBalaY = 0;
@@ -2738,7 +2897,7 @@ void ColicionObjetos()
 		}
 
 		//Colicion con mejora de Danho
-		if (mejoraDanho[i].activa != 0)
+		if (mejoraDanho[i].activa != 0 && mejoraDanho[i].seVende == 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, TAMANHO, TAMANHO))
 			{
@@ -2750,9 +2909,34 @@ void ColicionObjetos()
 				mejoraDanho[i].activa = 0;
 			}
 		}
+		else if (mejoraDanho[i].activa != 0 && mejoraDanho[i].seVende == 1 && personaje.cantidadMonedas >= mejoraDanho[i].precio)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, TAMANHO, TAMANHO))
+			{
+				for (int i = 0; i < MAX_BALAS; i++)
+				{
+					personaje.bala[i].danho++;
+				}
+
+				mejoraDanho[i].activa = 0;
+				personaje.cantidadMonedas -= mejoraDanho[i].precio;
+				
+				//Comprobar ubicacion de la mejora
+				registroTienda[mejoraDanho[i].idRegistro].comprado = 1;
+
+				for (int k = 0; k < indiceTienda; k++)
+				{
+					if (registroTienda[k].columna == mejoraDanho[i].columna && registroTienda[k].fila == mejoraDanho[i].fila && registroTienda[k].mapaX == actualMapaX && registroTienda[k].mapaY == actualMapaY)
+					{
+						registroTienda[k].comprado = 1; 
+						break; 
+					}
+				}
+			}
+		}
 
 		//Colicion con mejora de rango
-		if (mejoraRango[i].activa != 0)
+		if (mejoraRango[i].activa != 0 && mejoraRango[i].seVende == 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraRango[i].posX, mejoraRango[i].posY, TAMANHO, TAMANHO))
 			{
@@ -2760,14 +2944,56 @@ void ColicionObjetos()
 				mejoraRango[i].activa = 0;
 			}
 		}
+		else if (mejoraRango[i].activa != 0 && mejoraRango[i].seVende == 1 && personaje.cantidadMonedas >= mejoraRango[i].precio)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraRango[i].posX, mejoraRango[i].posY, TAMANHO, TAMANHO))
+			{
+				personaje.rangoDeBalas += 100;
+				mejoraRango[i].activa = 0;
+				personaje.cantidadMonedas -= mejoraRango[i].precio;
+				
+				//Comprobar ubicacion de la mejora
+				registroTienda[mejoraRango[i].idRegistro].comprado = 1;
+
+				for (int k = 0; k < indiceTienda; k++)
+				{
+					if (registroTienda[k].columna == mejoraRango[i].columna && registroTienda[k].fila == mejoraRango[i].fila && registroTienda[k].mapaX == actualMapaX && registroTienda[k].mapaY == actualMapaY)
+					{
+						registroTienda[k].comprado = 1; 
+						break; 
+					}
+				}
+			}
+		}
 
 		//Colicion con mejora de velocidad
-		if (mejoraVelocidad[i].activa != 0)
+		if (mejoraVelocidad[i].activa != 0 && mejoraRango[i].seVende == 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, TAMANHO, TAMANHO))
 			{
 				personaje.velocidad += 2;
 				mejoraVelocidad[i].activa = 0;
+			}
+		}
+		else if (mejoraVelocidad[i].activa != 0 && mejoraVelocidad[i].seVende == 1 && personaje.cantidadMonedas >= mejoraVelocidad[i].precio)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, TAMANHO, TAMANHO))
+			{
+				personaje.velocidad += 2;
+				mejoraVelocidad[i].activa = 0;
+				personaje.cantidadMonedas -= mejoraVelocidad[i].precio;
+				
+				//Comprobar ubicacion de la mejora
+				registroTienda[mejoraVelocidad[i].idRegistro].comprado = 1;
+
+				for (int k = 0; k < indiceTienda; k++)
+				{
+					if (registroTienda[k].columna == mejoraVelocidad[i].columna && registroTienda[k].fila == mejoraVelocidad[i].fila && registroTienda[k].mapaX == actualMapaX && registroTienda[k].mapaY == actualMapaY)
+					{
+						registroTienda[k].comprado = 1; 
+						break; 
+					}
+				}
 			}
 		}
 		
@@ -3146,13 +3372,14 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	int fogatasGeneradas = 0;
 	int seGeneroUnaHabitacioPunteria = 0;
 	int habitacionTrialGenerada = 0;
+	int tiendaGenerada = 0;
 
 	//La habitacion central siempre será la misma
 	mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 8 + 1;
+		auxRand = rand() % 9 + 1;
 
 		if (auxRand == 1)
 		{
@@ -3186,6 +3413,16 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		{
 			pullHabitaciones = "hab_trial.txt";
 		}
+		if (auxRand == 9 && tiendaGenerada == 0)
+		{
+			pullHabitaciones = "hab_tienda.txt";
+		}
+
+		//Garantia de sala
+		if (a >= cantidadHabitacionesDeseadas - 8 && tiendaGenerada == 0)
+		{
+			pullHabitaciones = "hab_tienda.txt";
+		}
 
 		if (a >= cantidadHabitacionesDeseadas - 7 && habitacionTrialGenerada == 0)
 		{
@@ -3206,7 +3443,6 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		if (a >= cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
-			seGeneroUnaHabitacionRecompensa ++;
 		}
 		
 		//Cuando este por generar la ultima habitacion, obliga a que sea la del jefe
@@ -3215,6 +3451,7 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 			pullHabitaciones = "hab_jefe_1.txt";
 		}
 
+		//Buscar direccion para ponerse la sala
 		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 
 		if (pullHabitaciones == "hab_trial.txt")
@@ -3237,6 +3474,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				if (pullHabitaciones == "hab_fogata.txt")
 				{
 					fogatasGeneradas++;
+				}
+
+				if (pullHabitaciones == "hab_tienda.txt")
+				{
+					tiendaGenerada++;
 				}
 				
 				if (pullHabitaciones == "hab_recompensa.txt")
@@ -3278,6 +3520,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				{
 					fogatasGeneradas++;
 				}
+
+				if (pullHabitaciones == "hab_tienda.txt")
+				{
+					tiendaGenerada++;
+				}
 				
 				if (pullHabitaciones == "hab_recompensa.txt")
 				{
@@ -3313,6 +3560,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				{
 					fogatasGeneradas++;
 				}
+
+				if (pullHabitaciones == "hab_tienda.txt")
+				{
+					tiendaGenerada++;
+				}
 				
 				if (pullHabitaciones == "hab_recompensa.txt")
 				{
@@ -3347,6 +3599,11 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				if (pullHabitaciones == "hab_fogata.txt")
 				{
 					fogatasGeneradas++;
+				}
+
+				if (pullHabitaciones == "hab_tienda.txt")
+				{
+					tiendaGenerada++;
 				}
 				
 				if (pullHabitaciones == "hab_recompensa.txt")
