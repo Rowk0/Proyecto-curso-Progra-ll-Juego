@@ -32,19 +32,17 @@
 
 //git: 
 
-//Pantalla desea jugar otra vez al terminar el juego
+//Hacer sistema ranking
+//Mejorar diseño mapas
+//planear el roguelike
 
+//Arreglar problemas al reiniciar
 //Separar en funciones cargar mapa, sprites, colisiones
 //registrar muertes aranhas
 //Arreglar generacion de fogatas y dianas, aparecen más de lo que deberia
 //Arreglar reaparicion de dianas una vez destruidas
 //mejorar puertas con llaves
 //Arreglar generacion de arañas
-
-//Diseñar mejor las hab_generales e incluir más, siendo más laberinticas
-
-//IMPORTANTE
-//sistema ranking
 
 //ideas:
 //trampas
@@ -304,6 +302,32 @@ int fogataActual = 0;
 
 int cantidadfogatasActivas = 0;
 
+typedef struct 
+{
+	char nombre[LARGO_TEXTO];
+	int puntajes[1000];
+	char nombres[1000][LARGO_TEXTO];
+	int indiceNombres;
+	int indicePuntajes;
+} ranking_;
+
+typedef struct 
+{
+	int JUEGO;
+	int REINICIAR;
+	int MENU;
+	int SISTEMA;
+} estadoJuego_;
+
+typedef struct 
+{
+	int verdaderaPantallaRanking;
+	int pantallaRanking;
+	int unichar;
+	int longitudNombre;
+} controlMenu_;
+
+
 ///////////////////////////////////////////////////////////////// Variables globales
 
 //Estructura donde se guarda el estado del teclado y del mouse
@@ -319,14 +343,6 @@ char *mapa[FILAS_MAPA][COLUMNAS_MAPA];
 //Control de ubicacion de mapa
 int actualMapaX = COLUMNAS_MAPA / 2 + 1;
 int actualMapaY = FILAS_MAPA / 2 + 1;
-
-//Cuando JUEGO = 0, el while termina y se cierra el programa
-int JUEGO = 0;
-int MENU = 1;
-int REINICIAR = 0;
-int SISTEMA = 1;
-
-//ESTRUCTURA JUEGO/////////////////////////////////////////////////////////////////////// estado de juego
 
 //Control de sprites del personaje
 int controlSprites = 0;
@@ -344,11 +360,11 @@ int seGeneroUnaRecompensa = 0;
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador);
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego);
 void MovimientoJugador();
 void InitAllegro();
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse);
-void InputHandle();
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking);
+void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos);
 void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos);
 void Disparo();
 void MovimientoCamara();
@@ -357,14 +373,14 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 void ColisionEnemigos();
 void CambioDeHabitaciones();
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo);
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneraciónDelMapa(int cantidadHabitacionesDeseadas);
 void DisparoEnemigos();
 void LogicaJefe();
 void HandicapsMejorables();
-void LogicaMenu();
+void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking);
 void ColicionObjetos();
 void RangoVisionEnemigo();
 void VerificarSalaVacia();
@@ -372,7 +388,8 @@ void GeneracionDeRecompensas();
 void ColicionInteractuables();
 void LogicaDianas();
 void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
-void LogicaReiniciar();
+void LogicaReiniciar(estadoJuego_ *estadoJuego);
+void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador, ranking_ *ranking);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -384,11 +401,24 @@ bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 int main(int argc, char **argv)
 { 
 	/////////////////////////////////////////////////////////////// Declaraciones de una vez
+	//Estado del juego
+	estadoJuego_ estadoJuego;
+
+	estadoJuego.JUEGO = 0;
+	estadoJuego.MENU = 1;
+	estadoJuego.REINICIAR = 0;
+	estadoJuego.SISTEMA = 1;
+
+	//Archivos
 	FILE *archivoMapas = NULL;
-	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
+	FILE *archivoRanking = NULL;
 
 	//Crear ventana
     ALLEGRO_DISPLAY *ventana;
+
+	//Control del menu
+	controlMenu_ controlMenu;
+	ALLEGRO_EVENT_QUEUE *colaEventos = NULL;
 
 	//Sprites
 	ALLEGRO_BITMAP *spriteSheet;
@@ -401,55 +431,61 @@ int main(int argc, char **argv)
 
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
+
+	//Variables texto	
+	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
+
+	//variables struct
+	ranking_ ranking;
 	
 	///////////////////////////////////////////////////////////////
 
-	while (SISTEMA)
-	{
-		InitAllegro();
-	
-		InitGameComponents(ventana, &mouse);
+	srand(time(NULL));
 
-		srand(time(NULL));
+	InitAllegro();
+
+	//Crear cola de eventos, solo se registra el teclado
+	colaEventos = al_create_event_queue();
+	al_register_event_source(colaEventos, al_get_keyboard_event_source());
+
+	//Cargar fuentes de texto
+	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
+
+	//Cargar Sprites
+	menuFondo = al_load_bitmap("menu_fondo.png");
+	spriteSheet = al_load_bitmap("64x64.png");
+	spriteSheetBalas = al_load_bitmap("sp_guns.png");
+	spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
+	spriteSheetIcons = al_load_bitmap("64x64_icons.png");
+	spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
+	spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
+
+	while (estadoJuego.SISTEMA)
+	{
+		InitGameComponents(ventana, &mouse, &ranking);
 
 		GeneraciónDelMapa(10); //9
 
-		fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
-
-		menuFondo = al_load_bitmap("menu_fondo.png");
-
-		while (MENU)
+		while (estadoJuego.MENU)
 		{
-			InputHandle();
+			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos);
 
-			RenderMenu(fuenteJuego, menuFondo);
+			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking);
 
-			LogicaMenu();
+			LogicaMenu(&estadoJuego, &controlMenu, &ranking, colaEventos, archivoRanking);
 
 			al_rest(0.016);
 		}
 
 		cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
 
-		spriteSheet = al_load_bitmap("64x64.png");
-
-		spriteSheetBalas = al_load_bitmap("sp_guns.png");
-
-		spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
-
-		spriteSheetIcons = al_load_bitmap("64x64_icons.png");
-
-		spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
-
-		spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
-
-		while (JUEGO)
+		while (estadoJuego.JUEGO)
 		{
 			//Funcion que actualiza el estado del teclado y mouse
-			InputHandle();
+			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos);
 
 			//Logica del juego. Ej: movimientos del jugador
-			Logica(sala, &personaje);
+			Logica(sala, &personaje, &estadoJuego);
 
 			//Dibujar aqui
 			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos);
@@ -458,13 +494,15 @@ int main(int argc, char **argv)
 			al_rest(0.016); 
 		}
 
-		while (REINICIAR)
+		Ranking(archivoRanking, 0, ranking.nombre, personaje.puntaje, &ranking);
+
+		while (estadoJuego.REINICIAR)
 		{
-			InputHandle();
+			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos);
 
 			RenderReiniciar(fuenteJuego);
 
-			LogicaReiniciar();
+			LogicaReiniciar(&estadoJuego);
 
 			al_rest(0.016);
 		}
@@ -473,41 +511,163 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void LogicaMenu()
+void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador, ranking_ *ranking)
 {
-	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO))
+	//Variables donde se guardan los textos leidos
+	char nombreLeido[LARGO_TEXTO];
+	int puntajeLeido;
+	char linea[100];
+
+	if (obtenerRanking == 0)
+	{
+		//Si el jugador no puso nombre se le nombra anonimo
+		if (RegistrarJugador[0] == '\0')
+		{
+			strcpy(RegistrarJugador, "Anonimo");
+		}
+
+		//abrir archivo
+		archivoRanking = fopen("ranking.txt", "a");
+
+		//revisar que no esté nulo
+		if (archivoRanking == NULL) 
+		{
+			printf("Error al abrir el archivo"); 
+		}
+
+		//Editando archivo
+		fprintf(archivoRanking, "%s %d\n", RegistrarJugador, puntajeDelJugador);
+
+		//cerrando archivo;
+		fclose(archivoRanking);
+	}
+	
+	if (obtenerRanking == 1)
+	{
+		//abrir archivo
+		archivoRanking = fopen("ranking.txt", "r");
+
+		if (archivoRanking == NULL) 
+		{
+			printf("Error al abrir el archivo"); 
+		}
+
+		ranking->indiceNombres = 0;
+		ranking->indicePuntajes = 0;
+
+		while (fgets(linea, 100, archivoRanking) != NULL)
+		{
+			sscanf(linea, "%s %d", nombreLeido, &puntajeLeido);
+
+			strcpy(ranking->nombres[ranking->indiceNombres], nombreLeido);
+			ranking->puntajes[ranking->indicePuntajes] = puntajeLeido;
+
+			ranking->indiceNombres++;
+			ranking->indicePuntajes++;
+		}
+
+		fclose(archivoRanking);
+	}
+}
+
+void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking)
+{
+	//Cuando el mouse posa sobre el cuadrado de jugar
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO) && controlMenu->verdaderaPantallaRanking == 0)
 	{
 		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
 		{
-			MENU = 0;
-			JUEGO = 1;
+			controlMenu->pantallaRanking = 1;
+		}
+	}
+
+	//boton pantalla ranking
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 840, 824, 204, 84) && controlMenu->verdaderaPantallaRanking == 0)
+	{
+		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+		{
+			controlMenu->verdaderaPantallaRanking = 1;
+
+			Ranking(archivoRanking, 1, ranking->nombre, personaje.puntaje, ranking);
+		}
+	}
+
+	//Boton volver al menu
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 100, 900, 200, 150) && controlMenu->verdaderaPantallaRanking == 1)
+	{
+		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+		{
+			controlMenu->verdaderaPantallaRanking = 0;
 		}
 	}
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo)
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking)
 {
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	//////////////////////////////////////////////// Dibujar en este espacio
+	//Mostrar Menu
+	if (controlMenu->pantallaRanking == 0 && controlMenu->verdaderaPantallaRanking == 0)
+	{
+		al_clear_to_color(al_map_rgb(0, 0, 0));
+		//////////////////////////////////////////////// Dibujar en este espacio
 
-	al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+		al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+
+		al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
+
+		al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Jugar");
+
+		al_draw_filled_rectangle(840, 824, 1044, 908, al_map_rgb(102, 0, 161));
+
+		al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 300, 0, "Ranking");
+
+		////////////////////////////////////////////////
+		al_flip_display();
+	}
 	
-	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
+	//Escribir nombre para empezar el juego
+	if (controlMenu->pantallaRanking == 1)
+	{
+		al_clear_to_color(al_map_rgb(0, 0, 0));
+		//////////////////////////////////////////////// Dibujar en este espacio
 
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Jugar");
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 700, 200, 0, "Ingresa tu nombre:");
 
-	////////////////////////////////////////////////
-	al_flip_display();
+		al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 700, 300, 0, "%s|", ranking->nombre);
+
+		////////////////////////////////////////////////
+		al_flip_display();	
+	}
+
+	//Pantalla de ranking
+	if (controlMenu->verdaderaPantallaRanking == 1)
+	{
+		al_clear_to_color(al_map_rgb(0, 0, 0));
+		//////////////////////////////////////////////// Dibujar en este espacio
+
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 150, 50, 0, "=====================RANKING=====================");
+
+		for (int i = 0; i < ranking->indiceNombres; i++)
+		{
+			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 400, 100 + i * 40, 0, "%s - %d", ranking->nombres[i], ranking->puntajes[i]);
+		}
+
+		al_draw_filled_rectangle(100, 900, 300, 1050, al_map_rgb(255, 255, 255));
+	
+		al_draw_text(fuenteJuego, al_map_rgb(0, 0, 0), 100, 950, 0, "volver");
+		
+		////////////////////////////////////////////////
+		al_flip_display();	
+	}
 }
 
-void LogicaReiniciar()
+void LogicaReiniciar(estadoJuego_ *estadoJuego)
 {
 	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO))
 	{
 		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
 		{
-			MENU = 1;
-			REINICIAR = 0;
+			estadoJuego->MENU = 1;
+			estadoJuego->REINICIAR = 0;
 		}
 	}
 }
@@ -525,7 +685,7 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_flip_display();
 }
 
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego)
 {
 	MovimientoJugador();
 
@@ -557,10 +717,10 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	al_get_mouse_num_axes();
 
 	//TERMINAR EL JUEGO
-	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1 && REINICIAR == 0)
+	if (mapaRojo.seObtuvo == 1 && mapaAzul.seObtuvo == 1 && mapaNaranjo.seObtuvo == 1 && mapaVerde.seObtuvo == 1 && estadoJuego->REINICIAR == 0)
 	{
-		JUEGO = 0;
-		REINICIAR = 1;
+		estadoJuego->JUEGO = 0;
+		estadoJuego->REINICIAR = 1;
 	}
 
 	//Verificar evento de dianas
@@ -603,8 +763,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador)
 	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
 	{
-		JUEGO = 0;
-		REINICIAR = 1;
+		estadoJuego->JUEGO = 0;
+		estadoJuego->REINICIAR = 1;
 	}
 }
 
@@ -1504,13 +1664,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
 		if (personaje.bala[i].activa != 0)
-		{
-			//Bala cuadrada
-			//al_draw_filled_rectangle(personaje.bala[i].posX, personaje.bala[i].posY, personaje.bala[i].posX + (TAMANHO / 4), personaje.bala[i].posY + (TAMANHO / 4), al_map_rgb(0, 255, 255));
-
-			//Bala sprite 
-			//al_draw_bitmap_region(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, personaje.bala[i].posX, personaje.bala[i].posY, 0);
-
+		{	
 			al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, personaje.bala[i].posX - 24, personaje.bala[i].posY - 24, TAMANHO, TAMANHO, 0); 
 		}
 
@@ -1723,12 +1877,15 @@ void InitAllegro()
 	al_init_ttf_addon();
 }
 
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
 	if(!ventana) return -1;
+
+	ranking->indiceNombres = 0;
+	ranking->indicePuntajes = 0;
 
 	//Inicializando Mouse
 	mouse->posX = 0;
@@ -1935,21 +2092,53 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse)
 	}
 }
 
-void InputHandle()
+void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos)
 {
-	al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del taclado
+	al_get_keyboard_state(&estado); //Llena la estructura con el estado actual del teclado
 	al_get_mouse_state(&estadoMouse);
 
 	mouse.posX = estadoMouse.x;
 	mouse.posY = estadoMouse.y;
 
+	ALLEGRO_EVENT evento;
+
 	//Apagar programa con ESC
 	if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE))
 	{
-		JUEGO = 0;
-		MENU = 0;
-		REINICIAR = 0;
-		SISTEMA = 0;
+		estadoJuego->JUEGO = 0;
+		estadoJuego->MENU = 0;
+		estadoJuego->REINICIAR = 0;
+		estadoJuego->SISTEMA = 0;
+	}
+
+	//Input de la pantallaRanking al poner nombre
+	while (al_get_next_event(colaEventos, &evento))
+	{
+		if (estadoJuego->MENU == 1 && controlMenu->pantallaRanking == 1)
+		{
+			if (evento.type == ALLEGRO_EVENT_KEY_CHAR)
+			{
+				controlMenu->unichar = evento.keyboard.unichar;
+
+				if (al_key_down(&estado, ALLEGRO_KEY_ENTER))
+				{
+					estadoJuego->MENU = 0;
+					controlMenu->pantallaRanking = 0;
+					estadoJuego->JUEGO = 1;
+				}
+				else if (al_key_down(&estado, ALLEGRO_KEY_BACKSPACE) && controlMenu->longitudNombre > 0)
+				{
+					controlMenu->longitudNombre--;
+					ranking->nombre[controlMenu->longitudNombre] = '\0';
+				}
+				else if (controlMenu->unichar > 32 && controlMenu->unichar <= 126 && controlMenu->longitudNombre < LARGO_TEXTO - 1)
+				{
+					ranking->nombre[controlMenu->longitudNombre] = (char)controlMenu->unichar;
+					controlMenu->longitudNombre++;
+					ranking->nombre[controlMenu->longitudNombre] = '\0';
+				}
+			}	
+		}
 	}
 }
 
@@ -3283,7 +3472,6 @@ void CambioDeHabitaciones()
 		{
 			actualMapaY ++;
 			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N', actualMapaX, actualMapaY);
-
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3308,7 +3496,6 @@ void CambioDeHabitaciones()
 		{
 			actualMapaY --;
 			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S', actualMapaX, actualMapaY);
-
 		}
 		
 		personaje.traspasoPuerta = 0;
