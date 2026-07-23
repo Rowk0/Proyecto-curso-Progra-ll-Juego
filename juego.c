@@ -150,9 +150,15 @@ typedef struct
 	int chocoConPared;
 	int auxRandAranha;
 	int rangoDeBalas;
+	int indiceEnemigo;
 } enemigo;
  
-enemigo slime[MAX_ENEMIGOS];
+typedef struct 
+{
+	/* data */
+} gestionsEnemigos_;
+
+//enemigo slime[MAX_ENEMIGOS];
 
 enemigo Jefe;
 
@@ -160,11 +166,12 @@ enemigo mago[MAX_ENEMIGOS];
 
 enemigo aranha[MAX_ENEMIGOS];
 
-int slimeActual = 0;
-
-int magoActual = 0;
-
-int aranhaActual = 0;
+typedef struct 
+{
+	int slime;
+	int mago;
+	int aranha;
+} controlIndices_;
 
 typedef struct 
 {
@@ -359,21 +366,21 @@ int seGeneroUnaRecompensa = 0;
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, enemigo slime[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego);
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, enemigo slime[MAX_ENEMIGOS]);
 void MovimientoJugador();
 void InitAllegro();
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking);
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, enemigo slime[MAX_ENEMIGOS]);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos);
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, enemigo slime[MAX_ENEMIGOS]);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
-void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
-void LogicaEnemigos();
-void ColisionEnemigos();
-void CambioDeHabitaciones();
+void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, enemigo slime[MAX_ENEMIGOS]);
+void LogicaEnemigos(enemigo slime[MAX_ENEMIGOS]);
+void ColisionEnemigos(enemigo slime[MAX_ENEMIGOS]);
+void CambioDeHabitaciones(controlIndices_ *controlIndices, enemigo slime[MAX_ENEMIGOS]);
 void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
@@ -383,8 +390,8 @@ void LogicaJefe();
 void HandicapsMejorables();
 void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking);
 void ColicionObjetos();
-void RangoVisionEnemigo();
-void VerificarSalaVacia();
+void RangoVisionEnemigo(enemigo slime[MAX_ENEMIGOS]);
+void VerificarSalaVacia(enemigo slime[MAX_ENEMIGOS]);
 void GeneracionDeRecompensas();
 void ColicionInteractuables();
 void LogicaDianas();
@@ -440,6 +447,8 @@ int main(int argc, char **argv)
 
 	//variables struct
 	ranking_ ranking;
+	controlIndices_ controlIndices;
+	enemigo slime[MAX_ENEMIGOS];
 	
 	///////////////////////////////////////////////////////////////
 
@@ -466,9 +475,9 @@ int main(int argc, char **argv)
 
 	while (estadoJuego.SISTEMA)
 	{
-		InitGameComponents(ventana, &mouse, &ranking);
+		InitGameComponents(ventana, &mouse, &ranking, slime);
 
-		cargarMapa(fondoMenu, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
+		cargarMapa(fondoMenu, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY, &controlIndices);
 
 		GeneracionDelMapa(20); 
 
@@ -483,7 +492,7 @@ int main(int argc, char **argv)
 			al_rest(0.016);
 		}
 
-		cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
+		cargarMapa(nombreHabitacion, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY, &controlIndices);
 
 		while (estadoJuego.JUEGO)
 		{
@@ -491,10 +500,10 @@ int main(int argc, char **argv)
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos);
 
 			//Logica del juego. Ej: movimientos del jugador
-			Logica(sala, &personaje, &estadoJuego);
+			Logica(sala, &personaje, &estadoJuego, &controlIndices, slime);
 
 			//Dibujar aqui
-			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven);
+			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, slime);
 
 			//Hacer descansar el cpu
 			al_rest(0.016); 
@@ -702,7 +711,7 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_flip_display();
 }
 
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego)
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, enemigo slime[MAX_ENEMIGOS])
 {
 	MovimientoJugador();
 
@@ -714,7 +723,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 
 	//MovimientoCamara();
 
-	LogicaEnemigos();
+	LogicaEnemigos(slime);
 
 	VerificarTraspasoPuertas(mapa, jugador);
 
@@ -722,9 +731,9 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 
 	ColicionInteractuables();
 
-	CambioDeHabitaciones();
+	CambioDeHabitaciones(controlIndices, slime);
 
-	VerificarSalaVacia();
+	VerificarSalaVacia(slime);
 
 	GeneracionDeRecompensas();
 
@@ -1020,7 +1029,7 @@ void HandicapsMejorables()
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo enemigo[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY)
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, enemigo slime[MAX_ENEMIGOS], char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices)
 {
 	int muerto = 0;
 	int cofreAbierto = 0;
@@ -1028,9 +1037,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	int cargadorObtenido = 0;
 	int auxRandTienda = 0;
 	int productoTiendaGenerado = 0;
-	aranhaActual = 0;
-	magoActual = 0;
-	slimeActual = 0;
+	controlIndices->aranha = 0;
+	controlIndices->mago = 0;
+	controlIndices->slime = 0;
 	mejoraDanhoActual = 0;
 	mejoraRangoActual = 0;
 	mejoraVelocidadActual = 0;
@@ -1441,26 +1450,26 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				//Si el slime no esta muerto se genera
 				if (muerto == 0)
 				{
-					if(slime[slimeActual].activa == 0)
+					if(slime[controlIndices->slime].activa == 0)
 					{
 						//Generar slime en la posicion 's' del mapa
-						slime[slimeActual].activa = 1;
-						slime[slimeActual].posX = j * TAMANHO;
-						slime[slimeActual].posY = i * TAMANHO;
-						slime[slimeActual].vida = 4;
+						slime[controlIndices->slime].activa = 1;
+						slime[controlIndices->slime].posX = j * TAMANHO;
+						slime[controlIndices->slime].posY = i * TAMANHO;
+						slime[controlIndices->slime].vida = 4;
 
 						//Registrar la ubicacion original del slime
-						slime[slimeActual].posXGeneracion = j;
-						slime[slimeActual].posYGeneracion = i;
+						slime[controlIndices->slime].posXGeneracion = j;
+						slime[controlIndices->slime].posYGeneracion = i;
 
-						slimeActual ++;
+						controlIndices->slime ++;
 					}
 				}
 			}
 
-			if (slimeActual > MAX_ENEMIGOS - 1)
+			if (controlIndices->slime > MAX_ENEMIGOS - 1)
 			{
-				slimeActual = 0;
+				controlIndices->slime = 0;
 			}
 
 			if (sala[i][j] == 'j')
@@ -1508,26 +1517,26 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 				if (muerto == 0)
 				{
-					if(mago[magoActual].activa == 0)
+					if(mago[controlIndices->mago].activa == 0)
 					{
 						//Generar slime en la posicion 's' del mapa
-						mago[magoActual].activa = 1;
-						mago[magoActual].posX = j * TAMANHO;
-						mago[magoActual].posY = i * TAMANHO;
-						mago[magoActual].vida = 4;
+						mago[controlIndices->mago].activa = 1;
+						mago[controlIndices->mago].posX = j * TAMANHO;
+						mago[controlIndices->mago].posY = i * TAMANHO;
+						mago[controlIndices->mago].vida = 4;
 
 						//Registrar la ubicacion original del slime
-						mago[magoActual].posXGeneracion = j;
-						mago[magoActual].posYGeneracion = i;
+						mago[controlIndices->mago].posXGeneracion = j;
+						mago[controlIndices->mago].posYGeneracion = i;
 
-						magoActual ++;
+						controlIndices->mago ++;
 					}
 				}
 			}
 
-			if (magoActual > MAX_ENEMIGOS - 1)
+			if (controlIndices->mago > MAX_ENEMIGOS - 1)
 			{
-				magoActual = 0;
+				controlIndices->mago = 0;
 			}
 
 			//cargar Arañas 
@@ -1546,24 +1555,24 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 				if (muerto == 0)
 				{
-					if(aranha[aranhaActual].activa == 0)
+					if(aranha[controlIndices->aranha].activa == 0)
 					{
-						aranha[aranhaActual].activa = 1;
-						aranha[aranhaActual].posX = j * TAMANHO;
-						aranha[aranhaActual].posY = i * TAMANHO;
-						aranha[aranhaActual].vida = 2;
+						aranha[controlIndices->aranha].activa = 1;
+						aranha[controlIndices->aranha].posX = j * TAMANHO;
+						aranha[controlIndices->aranha].posY = i * TAMANHO;
+						aranha[controlIndices->aranha].vida = 2;
 
-						aranha[aranhaActual].posXGeneracion = j;
-						aranha[aranhaActual].posYGeneracion = i;
+						aranha[controlIndices->aranha].posXGeneracion = j;
+						aranha[controlIndices->aranha].posYGeneracion = i;
 
-						aranhaActual ++;
+						controlIndices->aranha ++;
 					}
 				}
 			}
 
-			if (aranhaActual > MAX_ENEMIGOS - 1)
+			if (controlIndices->aranha > MAX_ENEMIGOS - 1)
 			{
-				aranhaActual = 0;
+				controlIndices->aranha = 0;
 			}
     	}
 	}
@@ -1725,7 +1734,7 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, enemigo slime[MAX_ENEMIGOS])
 {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
@@ -1912,7 +1921,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	}
 	
 	//Dibujo enemigos
-	AnimacionEnemigos(spriteSheet);
+	AnimacionEnemigos(spriteSheet, slime);
 	
 	//Puntero del mouse
 	al_draw_scaled_bitmap(spriteSheetCrosshair, 10 * 16, 3 * 16, 16, 16, mouse.posX - 30, mouse.posY - 32, TAMANHO, TAMANHO, 0);
@@ -1995,7 +2004,7 @@ void InitAllegro()
 	al_init_ttf_addon();
 }
 
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking)
+int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, enemigo slime[MAX_ENEMIGOS])
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
@@ -2036,6 +2045,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 		slime[i].posXGeneracion = 0;
 		slime[i].posYGeneracion = 0;
 		slime[i].ataquesEnemigos = 0;
+		slime[i].indiceEnemigo = 0;
 
 		mago[i].posX = 0;
 		mago[i].posY = 0;
@@ -2048,6 +2058,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 		mago[i].posYGeneracion = 0;
 		mago[i].ataquesEnemigos = 0;
 		mago[i].rangoDeBalas = 450;
+		mago[i].indiceEnemigo = 0;
 
 		aranha[i].posX = 0;
 		aranha[i].posY = 0;
@@ -2061,6 +2072,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 		aranha[i].ataquesEnemigos = 0;
 		aranha[i].chocoConPared = 0;
 		aranha[i].auxRandAranha = 0;
+		aranha[i].indiceEnemigo = 0;
 	}
 
 	Jefe.posX = 0;
@@ -2474,7 +2486,7 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 	personaje.movimientoJugador = 0;
 }
 
-void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
+void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, enemigo slime[MAX_ENEMIGOS])
 {
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
@@ -2585,7 +2597,7 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet)
 	}
 }
 
-void LogicaEnemigos()
+void LogicaEnemigos(enemigo slime[MAX_ENEMIGOS])
 {
 	//Colicion slime y pared
 	int auxXSlime = 0;
@@ -2593,13 +2605,13 @@ void LogicaEnemigos()
 	int auxXAranha = 0;
 	int auxYAranha = 0;
 
-	ColisionEnemigos();
+	ColisionEnemigos(slime);
 
 	DisparoEnemigos();
 
 	LogicaJefe();
 
-	RangoVisionEnemigo();
+	RangoVisionEnemigo(slime);
 
 	//Araña eligiendo que eje moverse
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -2704,7 +2716,7 @@ void LogicaEnemigos()
 	}
 }
 
-void RangoVisionEnemigo()
+void RangoVisionEnemigo(enemigo slime[MAX_ENEMIGOS])
 {
 	int rangoVision = 12 * TAMANHO;
 
@@ -2782,7 +2794,7 @@ void LogicaJefe()
 	
 }
 
-void ColisionEnemigos()
+void ColisionEnemigos(enemigo slime[MAX_ENEMIGOS])
 {
 	/////////////////////////////////////////////////////////////////////// Colisiones arañas y jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -3503,7 +3515,7 @@ void GeneracionDeRecompensas()
 	}
 }
 
-void VerificarSalaVacia()
+void VerificarSalaVacia(enemigo slime[MAX_ENEMIGOS])
 {
 	int enemigosVivos = 0;
 
@@ -3532,7 +3544,7 @@ void VerificarSalaVacia()
 	//printf("sala vacia = %d", salaVacia);
 }
 
-void CambioDeHabitaciones()
+void CambioDeHabitaciones(controlIndices_ *controlIndices, enemigo slime[MAX_ENEMIGOS])
 {
 	FILE *archivoHabitacion = NULL;
 	
@@ -3541,7 +3553,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY][actualMapaX - 1] != NULL)
 		{
 			actualMapaX --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'E', actualMapaX, actualMapaY);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'E', actualMapaX, actualMapaY, controlIndices);
 		}
 
 		personaje.traspasoPuerta = 0;
@@ -3565,7 +3577,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY][actualMapaX + 1] != NULL)
 		{
 			actualMapaX ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'O', actualMapaX, actualMapaY);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'O', actualMapaX, actualMapaY, controlIndices);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3589,7 +3601,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY + 1][actualMapaX] != NULL)
 		{
 			actualMapaY ++;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N', actualMapaX, actualMapaY);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'N', actualMapaX, actualMapaY, controlIndices);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3613,7 +3625,7 @@ void CambioDeHabitaciones()
 		if (mapa[actualMapaY - 1][actualMapaX] != NULL)
 		{
 			actualMapaY --;
-			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S', actualMapaX, actualMapaY);
+			cargarMapa(mapa[actualMapaY][actualMapaX], archivoHabitacion, sala, &personaje, slime, 'S', actualMapaX, actualMapaY, controlIndices);
 		}
 		
 		personaje.traspasoPuerta = 0;
