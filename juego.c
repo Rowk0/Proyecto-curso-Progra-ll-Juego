@@ -30,29 +30,30 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//git: 
-
-//Hacer sistema ranking
-//Mejorar diseño mapas
-//planear el roguelike
-
-//Arreglar problemas al reiniciar
+//Mañana:
+//cambiar todas las variables globales
 //Separar en funciones cargar mapa, sprites, colisiones
-//registrar muertes aranhas
-//Arreglar generacion de fogatas y dianas, aparecen más de lo que deberia
+
+//Mejorar diseño mapas
 //Arreglar reaparicion de dianas una vez destruidas
-//mejorar puertas con llaves
-//Arreglar generacion de arañas
+
+//Propuestas:
+//generacion aleatoria de arboles
+//Switch main
+
+//IMPORTANTE:
+//BALAAAAAAAAAAAAAAAAAS
+//BAJAR VARIABLES GLOBALES
 
 //ideas:
 //trampas
-//añadir tipos de habitaciones (Tienda que provee power-ups)
+//Enemigo que te persiga y dispare tres balas
 
-//Ultimo
-//dos jugadores
+//Ultimo:
+//Arreglar problemas al reiniciar
+//Dos jugadores
 //Joystick
 //sonidos y musica
-//Enemigo que te persiga y dispare tres balas
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -327,7 +328,6 @@ typedef struct
 	int longitudNombre;
 } controlMenu_;
 
-
 ///////////////////////////////////////////////////////////////// Variables globales
 
 //Estructura donde se guarda el estado del teclado y del mouse
@@ -346,6 +346,7 @@ int actualMapaY = FILAS_MAPA / 2 + 1;
 
 //Control de sprites del personaje
 int controlSprites = 0;
+int controlSpritesMenu = 0;
 
 //Control de movimiento del jefe
 int timerMovimientoJefe = 0;
@@ -365,7 +366,7 @@ void MovimientoJugador();
 void InitAllegro();
 int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos);
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven);
 void Disparo();
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero);
@@ -373,10 +374,10 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet);
 void LogicaEnemigos();
 void ColisionEnemigos();
 void CambioDeHabitaciones();
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking);
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
-void GeneraciónDelMapa(int cantidadHabitacionesDeseadas);
+void GeneracionDelMapa(int cantidadHabitacionesDeseadas);
 void DisparoEnemigos();
 void LogicaJefe();
 void HandicapsMejorables();
@@ -396,7 +397,7 @@ void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LAR
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
 bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
 
-//////////////////////////////////////////////////////////////////////////////////////////// main
+//////////////////////////////////////////////////////////////////////////////////////////// 
 
 int main(int argc, char **argv)
 { 
@@ -428,12 +429,14 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *spriteSheetCrosshair;
 	ALLEGRO_BITMAP *spriteSheetBalasEnemigos;
 	ALLEGRO_BITMAP *menuFondo;
+	ALLEGRO_BITMAP *spriteSheetIconsRaven;
 
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
 
 	//Variables texto	
 	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
+	char fondoMenu[LARGO_TEXTO] = "menu_fondo_mapa.txt";
 
 	//variables struct
 	ranking_ ranking;
@@ -459,18 +462,21 @@ int main(int argc, char **argv)
 	spriteSheetIcons = al_load_bitmap("64x64_icons.png");
 	spriteSheetCrosshair = al_load_bitmap ("crosshair.png");
 	spriteSheetBalasEnemigos = al_load_bitmap("sp_gunsEnemigo.png");
+	spriteSheetIconsRaven = al_load_bitmap("IconSet.png");
 
 	while (estadoJuego.SISTEMA)
 	{
 		InitGameComponents(ventana, &mouse, &ranking);
 
-		GeneraciónDelMapa(10); //9
+		cargarMapa(fondoMenu, archivoMapas, sala, &personaje, slime, '@', actualMapaX, actualMapaY);
+
+		GeneracionDelMapa(20); 
 
 		while (estadoJuego.MENU)
 		{
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos);
 
-			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking);
+			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking, sala, spriteSheet);
 
 			LogicaMenu(&estadoJuego, &controlMenu, &ranking, colaEventos, archivoRanking);
 
@@ -488,7 +494,7 @@ int main(int argc, char **argv)
 			Logica(sala, &personaje, &estadoJuego);
 
 			//Dibujar aqui
-			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos);
+			Render(sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven);
 
 			//Hacer descansar el cpu
 			al_rest(0.016); 
@@ -518,6 +524,7 @@ void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LAR
 	int puntajeLeido;
 	char linea[100];
 
+/// setRanking();
 	if (obtenerRanking == 0)
 	{
 		//Si el jugador no puso nombre se le nombra anonimo
@@ -542,6 +549,8 @@ void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LAR
 		fclose(archivoRanking);
 	}
 	
+
+////// getRanking();
 	if (obtenerRanking == 1)
 	{
 		//abrir archivo
@@ -555,8 +564,10 @@ void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LAR
 		ranking->indiceNombres = 0;
 		ranking->indicePuntajes = 0;
 
+		//Se obtiene la primera linea del archivo
 		while (fgets(linea, 100, archivoRanking) != NULL)
 		{
+			//Se lee la linea y se deja los nombres y enteros 
 			sscanf(linea, "%s %d", nombreLeido, &puntajeLeido);
 
 			strcpy(ranking->nombres[ranking->indiceNombres], nombreLeido);
@@ -573,7 +584,7 @@ void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LAR
 void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking)
 {
 	//Cuando el mouse posa sobre el cuadrado de jugar
-	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO) && controlMenu->verdaderaPantallaRanking == 0)
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 840, 524, 204, 84) && controlMenu->verdaderaPantallaRanking == 0)
 	{
 		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
 		{
@@ -582,7 +593,7 @@ void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *
 	}
 
 	//boton pantalla ranking
-	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 840, 824, 204, 84) && controlMenu->verdaderaPantallaRanking == 0)
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 840, 624, 204, 84) && controlMenu->verdaderaPantallaRanking == 0)
 	{
 		if(al_mouse_button_down(&estadoMouse, ALLEGRO_MOUSE_BUTTON_LEFT))
 		{
@@ -602,23 +613,29 @@ void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *
 	}
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking)
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet)
 {
+	controlSpritesMenu++;
+
 	//Mostrar Menu
 	if (controlMenu->pantallaRanking == 0 && controlMenu->verdaderaPantallaRanking == 0)
 	{
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+		DibujarMapa(mapa, spriteSheet);
 
-		al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
+		//al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
 
-		al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Jugar");
+		//Boton jugar (En negro para disimular con fondo)
+		al_draw_filled_rectangle(840, 524, 1044, 608, al_map_rgb(0, 0, 0));
 
-		al_draw_filled_rectangle(840, 824, 1044, 908, al_map_rgb(102, 0, 161));
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 850, 550, 0, "Jugar");
 
-		al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 300, 0, "Ranking");
+		//Boton ranking
+		al_draw_filled_rectangle(840, 624, 1044, 708, al_map_rgb(0, 0, 0));
+
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 830, 650, 0, "Ranking");
 
 		////////////////////////////////////////////////
 		al_flip_display();
@@ -630,9 +647,9 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 700, 200, 0, "Ingresa tu nombre:");
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 600, 200, 0, "Ingresa tu nombre:");
 
-		al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 700, 300, 0, "%s|", ranking->nombre);
+		al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 600, 300, 0, "%s|", ranking->nombre);
 
 		////////////////////////////////////////////////
 		al_flip_display();	
@@ -1064,6 +1081,9 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		mejoraDanho[i].activa = 0;
 		mejoraRango[i].activa = 0;
 		mejoraVelocidad[i].activa = 0;
+		mejoraDanho[i].seVende = 0;
+		mejoraRango[i].seVende = 0;
+		mejoraVelocidad[i].seVende = 0;
 	}
 
 	mapaAzul.activa = 0;
@@ -1526,7 +1546,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 				if (muerto == 0)
 				{
-					if(aranha[magoActual].activa == 0)
+					if(aranha[aranhaActual].activa == 0)
 					{
 						aranha[aranhaActual].activa = 1;
 						aranha[aranhaActual].posX = j * TAMANHO;
@@ -1551,6 +1571,30 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet)
 {
+	//# arbol
+	//T tienda de campaña
+	//+ roca que genera objetos vendibles (solo en tienda)
+	//E O N S puertas
+	//f fogata
+	//p pasto
+	//L celda con llave
+	//l celda
+	//t tumba
+	//k suelo de tumba
+	//F linterna de fuego
+	//v vallas
+	//C techo piedra
+	//P piedra 
+	//o ventana
+	//m mago enemigo
+	//A aranha enemiga
+	//s slime enemigo
+	//a objetivo importante ya puesto
+	//v objetivo importante ya puesto
+	//n objetivo importante ya puesto
+	//r objetivo importante ya puesto
+	//* ubicacion de recompensa al limpiar sala
+
 	for (int i = 0; i < FILAS_HABITACION; i++)
 	{
 		for (int j = 0; j < COLUMNAS_HABITACION; j++)
@@ -1558,6 +1602,41 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 			if (mapa[i][j] == '#')
 			{
 				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 't')
+			{
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 19 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'o')
+			{
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'V')
+			{
+				al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'k')
+			{
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 20 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'P')
+			{
+				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 14 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'c')
+			{
+				al_draw_bitmap_region(spriteSheet, 5 * TAMANHO, 14 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'i')
+			{
+				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
 			if (mapa[i][j] == 'T')
@@ -1573,6 +1652,31 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 			if (mapa[i][j] == 'E' || mapa[i][j] == 'O' || mapa[i][j] == 'N' || mapa[i][j] == 'S')
 			{
 				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
+			}
+
+			if (mapa[i][j] == 'F')
+			{
+				if ((controlSpritesMenu >= 0 && controlSpritesMenu <= 10) || (controlSprites >= 0 && controlSprites <= 10))
+				{
+					al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);	
+				}
+				if ((controlSpritesMenu >= 10 && controlSpritesMenu <= 20) || (controlSprites >= 10 && controlSprites <= 20))
+				{
+					al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);	
+				}
+				if ((controlSpritesMenu >= 20 && controlSpritesMenu <= 30) || (controlSprites >= 20 && controlSprites <= 30))
+				{
+					al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);	
+				}
+				if ((controlSpritesMenu >= 30 && controlSpritesMenu <= 40) || (controlSprites >= 30 && controlSprites <= 40))
+				{
+					al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 16 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);	
+				}
+			}
+
+			if (controlSpritesMenu >= 40)
+			{
+				controlSpritesMenu = 0;
 			}
 			
 			for (int k = 0; k < MAX_INTERACTUABLES; k++)
@@ -1601,7 +1705,7 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 					}
 				}
 			}
-
+			
 			if (mapa[i][j] == 'p')
 			{
 				al_draw_bitmap_region(spriteSheet, 4 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
@@ -1621,9 +1725,8 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven)
 {
-
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 
@@ -1656,8 +1759,8 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	//Cantidad de fogatas necesarias
 	if (actualMapaX == COLUMNAS_MAPA / 2 + 1 && actualMapaY == FILAS_MAPA / 2 + 1)
 	{
-		al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, TAMANHO + 100, TAMANHO * 5, 0);
-		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO + 200, TAMANHO * 5 + 20, 0, "%d/4", cantidadfogatasActivas);
+		al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, TAMANHO * 2, TAMANHO * 12, 0);
+		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 3 + 20, TAMANHO * 12 + 20, 0, "%d/4", cantidadfogatasActivas);
 	}
 	
 	//Dibujo de balas
@@ -1844,6 +1947,21 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 		{
 			return true;
 		}
+
+		if(mapa[fila][columna] == 'P')
+		{
+			return true;
+		}
+
+		if(mapa[fila][columna] == 'V')
+		{
+			return true;
+		}
+
+		if(mapa[fila][columna] == 'c')
+		{
+			return true;
+		}
 	}
 
 	return false;
@@ -1893,13 +2011,13 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 	mouse->tamanho = 7;
 
 	//Inicializando jugador
-	personaje.velocidad = 7;
+	personaje.velocidad = 16; ////////// 7
 	personaje.movimientoJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
 	personaje.vidas = 6;
 	personaje.invulnerable = 0;
-	personaje.cantidadMonedas = 200;
+	personaje.cantidadMonedas = 200; ///////// 0
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
 	personaje.cantidadDeBalas = 0;
@@ -1962,7 +2080,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 	{
 		personaje.bala[i].posX = 0;
 		personaje.bala[i].posY = 0;
-		personaje.bala[i].velocidad = 10;
+		personaje.bala[i].velocidad = 10;		
 		personaje.bala[i].activa = 0;
 		personaje.bala[i].danho = 3;               ///// originalmente 1
 		personaje.bala[i].anguloBalaX = 0;
@@ -3090,9 +3208,9 @@ void ColicionObjetos()
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraDanho[i].posX, mejoraDanho[i].posY, TAMANHO, TAMANHO))
 			{
-				for (int i = 0; i < MAX_BALAS; i++)
+				for (int k = 0; k < MAX_BALAS; k++)
 				{
-					personaje.bala[i].danho++;
+					personaje.bala[k].danho++;
 				}
 
 				mejoraDanho[i].activa = 0;
@@ -3156,7 +3274,7 @@ void ColicionObjetos()
 		}
 
 		//Colicion con mejora de velocidad
-		if (mejoraVelocidad[i].activa != 0 && mejoraRango[i].seVende == 0)
+		if (mejoraVelocidad[i].activa != 0 && mejoraVelocidad[i].seVende == 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, mejoraVelocidad[i].posX, mejoraVelocidad[i].posY, TAMANHO, TAMANHO))
 			{
@@ -3546,7 +3664,7 @@ void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], 
 	}
 }
 
-void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
+void GeneracionDelMapa(int cantidadHabitacionesDeseadas)
 {
 	int habitacionCardinal = 0;
 	int a = 0;
@@ -3567,40 +3685,41 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 	while (a < cantidadHabitacionesDeseadas)
 	{
 		auxRand = rand() % 9 + 1;
+		auxRand = 4;
 
 		if (auxRand == 1)
 		{
 			pullHabitaciones = "hab_general_1.txt";  
 		}
-		if (auxRand == 2)
+		else if (auxRand == 2)
 		{
 			pullHabitaciones = "hab_general_2.txt";  
 		}
-		if (auxRand == 3)
+		else if (auxRand == 3)
 		{
 			pullHabitaciones = "hab_general_3.txt";  
 		}
-		if (auxRand == 4)
+		else if (auxRand == 4)
 		{
 			pullHabitaciones = "hab_general_4.txt";  
 		}
-		if (auxRand == 5)
+		else if (auxRand == 5)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
 		}
-		if (auxRand == 6 && fogatasGeneradas < 3)
+		else if (auxRand == 6 && fogatasGeneradas < 3)
 		{
 			pullHabitaciones = "hab_fogata.txt";
 		}
-		if (auxRand == 7 && seGeneroUnaHabitacioPunteria == 0)
+		else if (auxRand == 7 && seGeneroUnaHabitacioPunteria == 0)
 		{
 			pullHabitaciones = "hab_punteria.txt";
 		}
-		if (auxRand == 8 && habitacionTrialGenerada == 0)
+		else if (auxRand == 8 && habitacionTrialGenerada == 0)
 		{
 			pullHabitaciones = "hab_trial.txt";
 		}
-		if (auxRand == 9 && tiendaGenerada == 0)
+		else if (auxRand == 9 && tiendaGenerada == 0)
 		{
 			pullHabitaciones = "hab_tienda.txt";
 		}
@@ -3611,29 +3730,29 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 			pullHabitaciones = "hab_tienda.txt";
 		}
 
-		if (a >= cantidadHabitacionesDeseadas - 7 && habitacionTrialGenerada == 0)
+		else if (a >= cantidadHabitacionesDeseadas - 7 && habitacionTrialGenerada == 0)
 		{
 			pullHabitaciones = "hab_trial.txt";
 		}
 		
-		if (a >= cantidadHabitacionesDeseadas - 6 && seGeneroUnaHabitacioPunteria == 0)
+		else if (a >= cantidadHabitacionesDeseadas - 6 && seGeneroUnaHabitacioPunteria == 0)
 		{
 			pullHabitaciones = "hab_punteria.txt";
 		}
 
-		if (a >= cantidadHabitacionesDeseadas - 5 && fogatasGeneradas < 3)
+		else if (a >= cantidadHabitacionesDeseadas - 5 && fogatasGeneradas < 3)
 		{
 			pullHabitaciones = "hab_fogata.txt"	;
 		}
 		
 		//La penultima habitacion generada siempre sera una sala de recompensa si no se genero antes
-		if (a >= cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
+		else if (a >= cantidadHabitacionesDeseadas - 2 && seGeneroUnaHabitacionRecompensa == 0)
 		{
 			pullHabitaciones = "hab_recompensa.txt";
 		}
 		
 		//Cuando este por generar la ultima habitacion, obliga a que sea la del jefe
-		if (a == cantidadHabitacionesDeseadas - 1)
+		else if (a == cantidadHabitacionesDeseadas - 1)
 		{
 			pullHabitaciones = "hab_jefe_1.txt";
 		}
@@ -3641,7 +3760,7 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 		//Buscar direccion para ponerse la sala
 		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 
-		if (pullHabitaciones == "hab_trial.txt")
+		if (strcmp(pullHabitaciones, "hab_trial.txt") == 0)
 		{
 			habitacionCardinal = 1;
 		}
@@ -3658,27 +3777,27 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				a ++;
 
 				//Verificacion de salas importantes
-				if (pullHabitaciones == "hab_fogata.txt")
+				if (strcmp(pullHabitaciones, "hab_fogata.txt") == 0)
 				{
 					fogatasGeneradas++;
 				}
 
-				if (pullHabitaciones == "hab_tienda.txt")
+				if (strcmp(pullHabitaciones, "hab_tienda.txt") == 0)
 				{
 					tiendaGenerada++;
 				}
 				
-				if (pullHabitaciones == "hab_recompensa.txt")
+				if (strcmp(pullHabitaciones, "hab_recompensa.txt") == 0)
 				{
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
-				if (pullHabitaciones == "hab_punteria.txt")
+				if (strcmp(pullHabitaciones, "hab_punteria.txt") == 0)
 				{
 					seGeneroUnaHabitacioPunteria++;
 				}
 
-				if (pullHabitaciones == "hab_trial.txt")
+				if (strcmp(pullHabitaciones, "hab_trial.txt") == 0)
 				{
 					habitacionTrialGenerada++;
 				}
@@ -3703,22 +3822,22 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				a ++;
 
 				//Verificacion de salas importantes
-				if (pullHabitaciones == "hab_fogata.txt")
+				if (strcmp(pullHabitaciones, "hab_fogata.txt") == 0)
 				{
 					fogatasGeneradas++;
 				}
 
-				if (pullHabitaciones == "hab_tienda.txt")
+				if (strcmp(pullHabitaciones, "hab_tienda.txt") == 0)
 				{
 					tiendaGenerada++;
 				}
 				
-				if (pullHabitaciones == "hab_recompensa.txt")
+				if (strcmp(pullHabitaciones, "hab_recompensa.txt") == 0)
 				{
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
-				if (pullHabitaciones == "hab_punteria.txt")
+				if (strcmp(pullHabitaciones, "hab_punteria.txt") == 0)
 				{
 					seGeneroUnaHabitacioPunteria++;
 				}
@@ -3743,22 +3862,22 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				a ++;
 
 				//Verificacion de salas importantes
-				if (pullHabitaciones == "hab_fogata.txt")
+				if (strcmp(pullHabitaciones, "hab_fogata.txt") == 0)
 				{
 					fogatasGeneradas++;
 				}
 
-				if (pullHabitaciones == "hab_tienda.txt")
+				if (strcmp(pullHabitaciones, "hab_tienda.txt") == 0)
 				{
 					tiendaGenerada++;
 				}
 				
-				if (pullHabitaciones == "hab_recompensa.txt")
+				if (strcmp(pullHabitaciones, "hab_recompensa.txt") == 0)
 				{
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
-				if (pullHabitaciones == "hab_punteria.txt")
+				if (strcmp(pullHabitaciones, "hab_punteria.txt") == 0)
 				{
 					seGeneroUnaHabitacioPunteria++;
 				}
@@ -3783,22 +3902,22 @@ void GeneraciónDelMapa(int cantidadHabitacionesDeseadas)
 				a ++;
 
 				//Verificacion de salas importantes
-				if (pullHabitaciones == "hab_fogata.txt")
+				if (strcmp(pullHabitaciones, "hab_fogata.txt") == 0)
 				{
 					fogatasGeneradas++;
 				}
 
-				if (pullHabitaciones == "hab_tienda.txt")
+				if (strcmp(pullHabitaciones, "hab_tienda.txt") == 0)
 				{
 					tiendaGenerada++;
 				}
 				
-				if (pullHabitaciones == "hab_recompensa.txt")
+				if (strcmp(pullHabitaciones, "hab_recompensa.txt") == 0)
 				{
 					seGeneroUnaHabitacionRecompensa++;
 				}
 
-				if (pullHabitaciones == "hab_punteria.txt")
+				if (strcmp(pullHabitaciones, "hab_punteria.txt") == 0)
 				{
 					seGeneroUnaHabitacioPunteria++;
 				}
