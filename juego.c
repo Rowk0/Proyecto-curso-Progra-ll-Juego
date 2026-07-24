@@ -30,8 +30,9 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//ayuda:
-//si eloy me banca el arreglo de punteros
+//Bajar totalmente las variables globales
+//sonidos y musica
+//Mejor diseño ranking
 
 //Separar en funciones cargar mapa, sprites, colisiones
 //Mejorar diseño mapas
@@ -46,7 +47,6 @@
 //Ultimo:
 //Joystick
 //Dos jugadores
-//sonidos y musica
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -75,6 +75,7 @@ typedef	struct
 	float direccionBalaEnemigo;
 	int posXNacimiento;
 	int posYNacimiento;
+	int seDisparo;
 } bala_;
 
 struct dirJugador_
@@ -225,7 +226,7 @@ typedef struct
 	objeto mejoraRango[MAX_OBJETOS];
 	objeto mejoraVelocidad[MAX_OBJETOS];
 
-	//Objetos unicos
+	//Objetos unicos (estructuras aparte)
 	objeto mapaRojo;
 	objeto mapaVerde;
 	objeto mapaAzul;
@@ -328,6 +329,8 @@ int cantidadRecompensas = 0;
 registroMuertes_ registroMuertes[MAX_REGISTROS];
 int cantidadMuertos = 0;
 
+////////////////////////////////////////////////////////
+
 //Control de balas
 int balaActualEnemigo = 0;
 
@@ -339,12 +342,14 @@ int cadenciaEnemigo = 0;
 float direccionBala = 0.0;
 float direccionBalaEnemigo = 0.0; 
 
+//Control de movimiento del jefe
+int timerMovimientoJefe = 0;
+
+////////////////////////////////////////////////////////////////
+
 jugador personaje;
 
 mouse_ mouse;
-
-//Control de movimiento del jefe
-int timerMovimientoJefe = 0;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
@@ -785,11 +790,11 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
 
-	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && personaje.balasrestantes > 0)
+	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
 	{
 		for (int i = 0; i < MAX_BALAS; i++)
 		{
-			if (personaje.bala[i].activa == 0)
+			if (!personaje.bala[i].seDisparo)
 			{
 				//La bala nace del centro del personaje
 				personaje.bala[i].posX = personaje.posX + (TAMANHO/2);
@@ -801,6 +806,10 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 
 				//Se activa la bala 
 				personaje.bala[i].activa = 1;
+				personaje.bala[i].seDisparo = 1;
+
+				//Informa al jugador de cuantas balas qeudan disponibles (se dibuja en pantalla)
+				personaje.balasDisponibles--;
 
 				//Se obtiene el arcotangente en radianes entre la posicion del mouse y posicion del personaje
 				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
@@ -808,9 +817,6 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 				//Se obtiene el angulo en de las balas
 				personaje.bala[i].anguloBalaX = cos(direccionBala) * personaje.bala[i].velocidad;
 				personaje.bala[i].anguloBalaY = sin(direccionBala) * personaje.bala[i].velocidad;
-
-				//Se resta en 1 la capacidad de balas
-				personaje.balasrestantes--;
 
 				//se reinicia el timer entre disparos
 				cadencia = 0;
@@ -2142,6 +2148,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		personaje.bala[i].danho = 1;              
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
+		personaje.bala[i].seDisparo = 0;
 
 		gestionEnemigos->jefe.bala[i].posX = 0;
 		gestionEnemigos->jefe.bala[i].posY = 0;
