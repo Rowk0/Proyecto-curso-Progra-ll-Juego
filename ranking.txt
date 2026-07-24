@@ -18,18 +18,9 @@ awdaw 0
 Anonimo 0
 Anonimo 0
 awf 0
-awd 10
-awfa 20
-awfaw 10
-awdafw 0
-awf 0
-awf 0
-awfaw 20
-awfa 40
-AWFA 0
-AWF 80
+awd 10awf 90
+awfwa 20
+awf 430
+awfwa 190
 awf 20
-awfa 60
-awfaw 90
-wdf 110
-awfa 20
+awf 0
