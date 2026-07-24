@@ -34,10 +34,7 @@
 //sonidos y musica
 //Mejor diseño ranking
 
-//Separar en funciones cargar mapa, sprites, colisiones
 //Mejorar diseño mapas
-//generacion aleatoria de arboles
-//Switch main
 //Arreglar problemas al reiniciar
 
 //ideas:
@@ -112,7 +109,6 @@ typedef struct
 
 typedef struct 
 {
-	int tipo;
 	int posX;
 	int posY;
 	int velocidad;
@@ -307,15 +303,27 @@ typedef struct
 	int seGeneroUnaRecompensa;
 } estadoMapa_;
 
+typedef struct 
+{
+	dianas_ dianas[MAX_DIANAS];
+	int dianasActuales;
+	int cantidadDianasDestruidas;
+} gestionDianas_;
+
+typedef struct 
+{
+	interactuables fogata[MAX_INTERACTUABLES];
+	int fogataActual;
+	int cantidadfogatasActivas;
+} gestionInteractuables_;
+
+typedef struct 
+{
+	/* data */
+} registroMundo_;
+
+
 ///////////////////////////////////////////////////////////////// Variables globales
-
-dianas_ dianas[MAX_DIANAS];
-int dianasActuales = 0;
-int cantidadDianasDestruidas = 0;
-
-interactuables fogata[MAX_INTERACTUABLES];
-int fogataActual = 0;
-int cantidadfogatasActivas = 0;
 
 registroTienda_ registroTienda[MAX_REGISTROS];
 int indiceTienda = 0;
@@ -342,6 +350,8 @@ int cadenciaEnemigo = 0;
 float direccionBala = 0.0;
 float direccionBalaEnemigo = 0.0; 
 
+////////////////////////////////////////////////////// ENEMIGO
+
 //Control de movimiento del jefe
 int timerMovimientoJefe = 0;
 
@@ -353,23 +363,23 @@ mouse_ mouse;
 
 /////////////////////////////////////////////////////////////////  Funciones
 
-void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
+void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void InitAllegro();
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, estadoSistema_ *estadoSistema);
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, estadoSistema_ *estadoSistema);
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, gestionEnemigos_ *gestionEnemigos, estadoSistema_ *estadoSistema);
 void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
 void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema);
+void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa);
@@ -381,13 +391,13 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
 void RangoVisionEnemigo(gestionEnemigos_ *gestionEnemigos);
 void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa);
 void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void ColicionInteractuables(estadoMapa_ *estadoMapa);
-void LogicaDianas(estadoMapa_ *estadoMapa);
+void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas);
 void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
 void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema);
 void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador);
 void GetRanking(FILE *archivoRanking, ranking_ *ranking);
-void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
+void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -442,6 +452,8 @@ int main(int argc, char **argv)
 	gestionObjetos_ gestionObjetos;
 	estadoSistema_ estadoSistema;
 	estadoMapa_ estadoMapa;
+	gestionDianas_ gestionDianas;
+	gestionInteractuables_ gestionInteractuables;
 	
 	///////////////////////////////////////////////////////////////
 
@@ -470,10 +482,10 @@ int main(int argc, char **argv)
 	//Si sistema es 0 el programa se cierra
 	while (estadoJuego.SISTEMA)
 	{
-		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa);
+		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
 
 		//Cargar mapa hace que se lea un archivo y genere una copia en estadoMapa->sala
-		cargarMapa(fondoMenu, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa);
+		cargarMapa(fondoMenu, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables);
 
 		//El entero representa la cantidad de habitaciones deseadas para generar en el mapa, va de la mano con FILAS_MAPA Y COLUMNAS_MAPA
 		GeneracionDelMapa(20, &estadoMapa); 
@@ -482,14 +494,14 @@ int main(int argc, char **argv)
 		{
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
-			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking, estadoMapa.sala, spriteSheet, &estadoSistema);
+			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking, estadoMapa.sala, spriteSheet, &estadoSistema, &gestionInteractuables);
 
 			LogicaMenu(&estadoJuego, &controlMenu, &ranking, colaEventos, archivoRanking, &estadoSistema);
 
 			al_rest(0.016);
 		}
 
-		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa);
+		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables);
 
 		while (estadoJuego.JUEGO)
 		{
@@ -497,10 +509,10 @@ int main(int argc, char **argv)
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
 			//Logica del juego. Ej: movimientos del jugador
-			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa);
+			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
 
 			//Dibujar aqui
-			Render(estadoMapa.sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa);
+			Render(estadoMapa.sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
 
 			//Hacer descansar el cpu
 			al_rest(0.016);
@@ -613,7 +625,7 @@ void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *
 	}
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema)
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables)
 {
 	estadoSistema->controlSpritesMenu++;
 
@@ -623,7 +635,7 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 		al_clear_to_color(al_map_rgb(0, 0, 0));
 		//////////////////////////////////////////////// Dibujar en este espacio
 
-		DibujarMapa(mapa, spriteSheet, estadoSistema);
+		DibujarMapa(mapa, spriteSheet, estadoSistema, gestionInteractuables);
 
 		//al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
 
@@ -702,7 +714,7 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_flip_display();
 }
 
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	MovimientoJugador(estadoSistema, estadoMapa);
 
@@ -720,15 +732,15 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 
 	ColicionObjetos(gestionObjetos, estadoMapa);
 
-	ColicionInteractuables(estadoMapa);
+	ColicionInteractuables(estadoMapa, gestionDianas, gestionInteractuables);
 
-	CambioDeHabitaciones(controlIndices, gestionEnemigos, gestionObjetos, estadoMapa);
+	CambioDeHabitaciones(controlIndices, gestionEnemigos, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 
 	VerificarSalaVacia(gestionEnemigos, estadoMapa);
 
 	GeneracionDeRecompensas(gestionObjetos, estadoMapa);
 
-	LogicaDianas(estadoMapa);
+	LogicaDianas(estadoMapa, gestionDianas);
 	
 	//Axis del mouse
 	al_get_mouse_num_axes();
@@ -740,16 +752,16 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		estadoJuego->REINICIAR = 1;
 	}
 
-	//Verificar evento de dianas
-	cantidadDianasDestruidas = 0;
+	//Verificar evento de gestionDianas->dianas
+	gestionDianas->cantidadDianasDestruidas = 0;
 
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		if (dianas[i].destruida != 0)
+		if (gestionDianas->dianas[i].destruida != 0)
 		{
-			cantidadDianasDestruidas++;
+			gestionDianas->cantidadDianasDestruidas++;
 
-			if (cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.especial == 0)
+			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.especial == 0)
 			{
 				gestionObjetos->mapaVerde.activa = 1;
 				gestionObjetos->mapaVerde.posX = LARGO_PANTALLA / 2;
@@ -760,7 +772,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	}
 
 	//Verificar el evento de fogatas
-	if (cantidadfogatasActivas >= 4)
+	if (gestionInteractuables->cantidadfogatasActivas >= 4)
 	{
 		if (estadoMapa->actualMapaX == COLUMNAS_MAPA / 2 + 1 && estadoMapa->actualMapaY == FILAS_MAPA / 2 + 1)
 		{
@@ -809,7 +821,7 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 				personaje.bala[i].seDisparo = 1;
 
 				//Informa al jugador de cuantas balas qeudan disponibles (se dibuja en pantalla)
-				personaje.balasDisponibles--;
+				personaje.balasrestantes--;
 
 				//Se obtiene el arcotangente en radianes entre la posicion del mouse y posicion del personaje
 				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
@@ -1037,9 +1049,8 @@ void HandicapsMejorables()
 	}
 }
 
-void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
-	
 	controlIndices->aranha = 0;
 	controlIndices->mago = 0;
 	controlIndices->slime = 0;
@@ -1048,7 +1059,7 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 	gestionObjetos->mejoraVelocidadActual = 0;
 	estadoMapa->salaVacia = 0;
 	estadoMapa->seGeneroUnaRecompensa = 0;
-	dianasActuales = 0;
+	gestionDianas->dianasActuales = 0;
 
 	//Reinicio de enemigos
 	for (int k = 0; k < MAX_ENEMIGOS; k++)
@@ -1101,20 +1112,20 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 	//Reinicio Interactuables
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
 	{
-		fogata[i].activa = 0;
-		fogata[i].fogataActiva = 0;
+		gestionInteractuables->fogata[i].activa = 0;
+		gestionInteractuables->fogata[i].fogataActiva = 0;
 	}
 
-	fogataActual = 0;
+	gestionInteractuables->fogataActual = 0;
 
 	//Reinicio Dianas
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		dianas[i].activa = 0;
+		gestionDianas->dianas[i].activa = 0;
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	//Variables locales temporales donde se guardan los registros por llamada
 	int muerto = 0;
@@ -1130,7 +1141,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 		return 0;
 	} 
 
-	DesactivarObjetosActivos(gestionEnemigos, controlIndices, gestionObjetos, estadoMapa);
+	DesactivarObjetosActivos(gestionEnemigos, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1277,27 +1288,27 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 				if (fogataEncendida == 0)
 				{
-					fogata[fogataActual].activa = 1;
-					fogata[fogataActual].posX = j * TAMANHO;
-					fogata[fogataActual].posY = i * TAMANHO;
-					fogata[fogataActual].fila = i;
-					fogata[fogataActual].columna = j;
-					fogataActual++;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].activa = 1;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].posX = j * TAMANHO;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].posY = i * TAMANHO;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].fila = i;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].columna = j;
+					gestionInteractuables->fogataActual++;
 				}
 				else
 				{
-					fogata[fogataActual].activa = 1;
-					fogata[fogataActual].fogataActiva = 1;
-					fogata[fogataActual].posX = j * TAMANHO;
-					fogata[fogataActual].posY = i * TAMANHO;
-					fogata[fogataActual].fila = i;
-					fogata[fogataActual].columna = j;
-					fogataActual++;	
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].activa = 1;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].fogataActiva = 1;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].posX = j * TAMANHO;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].posY = i * TAMANHO;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].fila = i;
+					gestionInteractuables->fogata[gestionInteractuables->fogataActual].columna = j;
+					gestionInteractuables->fogataActual++;	
 				}
 
-				if (fogataActual >= MAX_INTERACTUABLES)
+				if (gestionInteractuables->fogataActual >= MAX_INTERACTUABLES)
 				{
-					fogataActual = 0;
+					gestionInteractuables->fogataActual = 0;
 				}
 				
 				estadoMapa->seGeneroUnaRecompensa++;
@@ -1374,20 +1385,20 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 				if (dianaDestruida == 0)
 				{
-					dianas[dianasActuales].posX = j * TAMANHO;
-					dianas[dianasActuales].posY = i * TAMANHO;
-					dianas[dianasActuales].fila = i;
-					dianas[dianasActuales].columna = j;
-					dianas[dianasActuales].activa = 1;
-					dianasActuales++;
+					gestionDianas->dianas[gestionDianas->dianasActuales].posX = j * TAMANHO;
+					gestionDianas->dianas[gestionDianas->dianasActuales].posY = i * TAMANHO;
+					gestionDianas->dianas[gestionDianas->dianasActuales].fila = i;
+					gestionDianas->dianas[gestionDianas->dianasActuales].columna = j;
+					gestionDianas->dianas[gestionDianas->dianasActuales].activa = 1;
+					gestionDianas->dianasActuales++;
 				}
 
 				estadoMapa->seGeneroUnaRecompensa++;
 			}
 
-			if (dianasActuales >= MAX_DIANAS)
+			if (gestionDianas->dianasActuales >= MAX_DIANAS)
 			{
-				dianasActuales = 0;
+				gestionDianas->dianasActuales = 0;
 			}
 
 			//Cargar gestionObjetos->cofres
@@ -1609,13 +1620,13 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	}
 }
 
-void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema)
+void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables)
 {
 	//# arbol
 	//T tienda de campaña
 	//+ roca que genera objetos vendibles (solo en tienda)
 	//E O N S puertas
-	//f fogata
+	//f gestionInteractuables->fogata
 	//p pasto
 	//L celda con llave
 	//l celda
@@ -1721,27 +1732,27 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 			
 			for (int k = 0; k < MAX_INTERACTUABLES; k++)
 			{
-				if (mapa[i][j] == 'f' && fogata[k].fogataActiva == 0)
+				if (mapa[i][j] == 'f' && gestionInteractuables->fogata[k].fogataActiva == 0)
 				{
-					al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);
+					al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, gestionInteractuables->fogata[k].posX, gestionInteractuables->fogata[k].posY, 0);
 				}
-				else if (mapa[i][j] == 'f' && fogata[k].fogataActiva != 0)
+				else if (mapa[i][j] == 'f' && gestionInteractuables->fogata[k].fogataActiva != 0)
 				{
 					if (estadoSistema->controlSprites >= 0 && estadoSistema->controlSprites <= 10)
 					{
-						al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
+						al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, gestionInteractuables->fogata[k].posX, gestionInteractuables->fogata[k].posY, 0);	
 					}
 					if (estadoSistema->controlSprites >= 10 && estadoSistema->controlSprites <= 20)
 					{
-						al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
+						al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, gestionInteractuables->fogata[k].posX, gestionInteractuables->fogata[k].posY, 0);	
 					}
 					if (estadoSistema->controlSprites >= 20 && estadoSistema->controlSprites <= 30)
 					{
-						al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
+						al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, gestionInteractuables->fogata[k].posX, gestionInteractuables->fogata[k].posY, 0);	
 					}
 					if (estadoSistema->controlSprites >= 30 && estadoSistema->controlSprites <= 40)
 					{
-						al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, fogata[k].posX, fogata[k].posY, 0);	
+						al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, gestionInteractuables->fogata[k].posX, gestionInteractuables->fogata[k].posY, 0);	
 					}
 				}
 			}
@@ -1765,12 +1776,12 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	}
 }
 
-void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
+void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 
-	DibujarMapa(mapa, spriteSheet, estadoSistema);
+	DibujarMapa(mapa, spriteSheet, estadoSistema, gestionInteractuables);
 
 	//Jugador de SpriteSheet
 	AnimacionPersonaje(spriteSheet, spriteSheetCaminarCaballero, estadoSistema);
@@ -1800,7 +1811,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 	if (estadoMapa->actualMapaX == COLUMNAS_MAPA / 2 + 1 && estadoMapa->actualMapaY == FILAS_MAPA / 2 + 1)
 	{
 		al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, TAMANHO * 2, TAMANHO * 12, 0);
-		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 3 + 20, TAMANHO * 12 + 20, 0, "%d/4", cantidadfogatasActivas);
+		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 3 + 20, TAMANHO * 12 + 20, 0, "%d/4", gestionInteractuables->cantidadfogatasActivas);
 	}
 	
 	//Dibujo de balas
@@ -1825,26 +1836,26 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		}
 	}
 
-	//Dibujo de dianas
+	//Dibujo de gestionDianas->dianas
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		if (dianas[i].activa != 0)
+		if (gestionDianas->dianas[i].activa != 0)
 		{
 			if (estadoSistema->controlSprites >= 0 && estadoSistema->controlSprites <= 10)
 			{
-				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY, 0);	
 			}
 			if (estadoSistema->controlSprites >= 10 && estadoSistema->controlSprites <= 20)
 			{
-				al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 12 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY, 0);	
 			}
 			if (estadoSistema->controlSprites >= 20 && estadoSistema->controlSprites <= 30)
 			{
-				al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 13 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY, 0);	
 			}
 			if (estadoSistema->controlSprites >= 30 && estadoSistema->controlSprites <= 40)
 			{
-				al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, dianas[i].posX, dianas[i].posY, 0);
+				al_draw_bitmap_region(spriteSheet, 14 * TAMANHO, 17 * TAMANHO, TAMANHO, TAMANHO, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY, 0);
 			}
 		}
 	}
@@ -2035,13 +2046,18 @@ void InitAllegro()
 	al_init_ttf_addon();
 }
 
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
 	if(!ventana) printf("Error al abrir ventana");
 
+	//Inicializando objetos secundarios
+	gestionDianas->dianasActuales = 0;
+	gestionDianas->cantidadDianasDestruidas = 0;
+
+	//Inicializando ranking
 	ranking->indiceNombres = 0;
 	ranking->indicePuntajes = 0;
 
@@ -2080,7 +2096,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	personaje.cantidadMonedas = 200; ///////// 0
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
-	personaje.balasrestantes = 20;
+	personaje.balasrestantes = MAX_BALAS;
 	personaje.puntaje = 0;
 
 	//Inicializando enemigos
@@ -2090,7 +2106,6 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		gestionEnemigos->slime[i].posY = 0;
 		gestionEnemigos->slime[i].velocidad = 3;
 		gestionEnemigos->slime[i].activa = 0;
-		gestionEnemigos->slime[i].tipo = 0;
 		gestionEnemigos->slime[i].direccion = 1;
 		gestionEnemigos->slime[i].vida = 4;
 		gestionEnemigos->slime[i].posXGeneracion = 0;
@@ -2102,7 +2117,6 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		gestionEnemigos->mago[i].posY = 0;
 		gestionEnemigos->mago[i].velocidad = 3;
 		gestionEnemigos->mago[i].activa = 0;
-		gestionEnemigos->mago[i].tipo = 0;
 		gestionEnemigos->mago[i].direccion = 0;
 		gestionEnemigos->mago[i].vida = 4;
 		gestionEnemigos->mago[i].posXGeneracion = 0;
@@ -2115,7 +2129,6 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		gestionEnemigos->aranha[i].posY = 0;
 		gestionEnemigos->aranha[i].velocidad = 5;
 		gestionEnemigos->aranha[i].activa = 0;
-		gestionEnemigos->aranha[i].tipo = 0;
 		gestionEnemigos->aranha[i].direccion = 1;
 		gestionEnemigos->aranha[i].vida = 2;
 		gestionEnemigos->aranha[i].posXGeneracion = 0;
@@ -2130,7 +2143,6 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	gestionEnemigos->jefe.posY = 0;
 	gestionEnemigos->jefe.velocidad = 4;
 	gestionEnemigos->jefe.activa = 0;
-	gestionEnemigos->jefe.tipo = 0;
 	gestionEnemigos->jefe.direccion = 0;
 	gestionEnemigos->jefe.vida = 20;
 	gestionEnemigos->jefe.posXGeneracion = 0;
@@ -2229,25 +2241,25 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	//Interactuables inicializacion
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
 	{
-		fogata[i].activa = 0;
-		fogata[i].posX = 0;
-		fogata[i].posY = 0;
-		fogata[i].fogataActiva = 0;
-		fogata[i].columna = 0;
-		fogata[i].fila = 0;
+		gestionInteractuables->fogata[i].activa = 0;
+		gestionInteractuables->fogata[i].posX = 0;
+		gestionInteractuables->fogata[i].posY = 0;
+		gestionInteractuables->fogata[i].fogataActiva = 0;
+		gestionInteractuables->fogata[i].columna = 0;
+		gestionInteractuables->fogata[i].fila = 0;
 	}
 
-	cantidadfogatasActivas = 0;
-	fogataActual = 0;
+	gestionInteractuables->cantidadfogatasActivas = 0;
+	gestionInteractuables->fogataActual = 0;
 
 	//Dianas inicializacion
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		dianas[i].activa = 0;
-		dianas[i].velocidad = 10;
-		dianas[i].chocoConPared = 0;
-		dianas[i].auxRanDianas = 0;
-		dianas[i].destruida = 0;
+		gestionDianas->dianas[i].activa = 0;
+		gestionDianas->dianas[i].velocidad = 10;
+		gestionDianas->dianas[i].chocoConPared = 0;
+		gestionDianas->dianas[i].auxRanDianas = 0;
+		gestionDianas->dianas[i].destruida = 0;
 	}
 
 	//Inicializacion registros
@@ -3246,9 +3258,19 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->municiones[i].posX, gestionObjetos->municiones[i].posY, TAMANHO, TAMANHO))
 			{
+				//Ahora todas las balas se puden volver a disparar
+				for (int k = 0; k < MAX_BALAS; k++)
+				{
+					personaje.bala[k].seDisparo = 0;
+				}
+
+				//Reinicia el contador visual
 				personaje.balasrestantes = MAX_BALAS;
+				
+				//Desactiva el cargador
 				gestionObjetos->municiones[i].activa = 0;
 
+				//Se registra que el cargador recogido
 				registroRecompensas[cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
 				registroRecompensas[cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
 				registroRecompensas[cantidadRecompensas].fila = gestionObjetos->municiones[i].fila;
@@ -3449,21 +3471,21 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 	}
 }
 
-void ColicionInteractuables(estadoMapa_ *estadoMapa)
+void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
 	{
-		if (fogata[i].activa != 0  && fogata[i].fogataActiva == 0)
+		if (gestionInteractuables->fogata[i].activa != 0  && gestionInteractuables->fogata[i].fogataActiva == 0)
 		{
-			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, fogata[i].posX, fogata[i].posY, TAMANHO, TAMANHO))
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionInteractuables->fogata[i].posX, gestionInteractuables->fogata[i].posY, TAMANHO, TAMANHO))
 			{
-				fogata[i].fogataActiva = 1;
-				cantidadfogatasActivas++;
+				gestionInteractuables->fogata[i].fogataActiva = 1;
+				gestionInteractuables->cantidadfogatasActivas++;
 
 				registroInteractuables[cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
 				registroInteractuables[cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
-				registroInteractuables[cantidadInteractuables].fila = fogata[i].fila;
-				registroInteractuables[cantidadInteractuables].columna = fogata[i].columna;
+				registroInteractuables[cantidadInteractuables].fila = gestionInteractuables->fogata[i].fila;
+				registroInteractuables[cantidadInteractuables].columna = gestionInteractuables->fogata[i].columna;
 				registroInteractuables[cantidadInteractuables].fogataEncendida = 1;
 				cantidadInteractuables++;
 
@@ -3474,22 +3496,22 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa)
 
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		if (dianas[i].activa != 0)
+		if (gestionDianas->dianas[i].activa != 0)
 		{
 			for (int j = 0; j < MAX_BALAS; j++)
 			{
 				if (personaje.bala[j].activa != 0)
 				{
-					if (Colicion(personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO/4, TAMANHO/4, dianas[i].posX, dianas[i].posY, TAMANHO, TAMANHO))
+					if (Colicion(personaje.bala[j].posX, personaje.bala[j].posY, TAMANHO/4, TAMANHO/4, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY, TAMANHO, TAMANHO))
 					{
 						personaje.bala[j].activa = 0;
-						dianas[i].activa = 0;
-						dianas[i].destruida = 1;
+						gestionDianas->dianas[i].activa = 0;
+						gestionDianas->dianas[i].destruida = 1;
 
 						registroInteractuables[cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
 						registroInteractuables[cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
-						registroInteractuables[cantidadInteractuables].fila = dianas[i].fila;
-						registroInteractuables[cantidadInteractuables].columna = dianas[i].columna;
+						registroInteractuables[cantidadInteractuables].fila = gestionDianas->dianas[i].fila;
+						registroInteractuables[cantidadInteractuables].columna = gestionDianas->dianas[i].columna;
 						registroInteractuables[cantidadInteractuables].dianaDestruida = 1;
 						cantidadInteractuables++;
 					}
@@ -3499,7 +3521,7 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa)
 	}
 }
 
-void LogicaDianas(estadoMapa_ *estadoMapa)
+void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas)
 {
 	int auxXDiana = 0;
 	int auxYDiana = 0;
@@ -3507,53 +3529,53 @@ void LogicaDianas(estadoMapa_ *estadoMapa)
 
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
-		auxXDiana = dianas[i].posX;
-		auxYDiana = dianas[i].posY;
+		auxXDiana = gestionDianas->dianas[i].posX;
+		auxYDiana = gestionDianas->dianas[i].posY;
 
-		if (dianas[i].auxRanDianas == 0)
+		if (gestionDianas->dianas[i].auxRanDianas == 0)
 		{
-			dianas[i].auxRanDianas = rand() % 2 + 1;
+			gestionDianas->dianas[i].auxRanDianas = rand() % 2 + 1;
 		}
 		
-		if (dianas[i].auxRanDianas == 1)
+		if (gestionDianas->dianas[i].auxRanDianas == 1)
 		{
-			if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 == 0)
+			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 == 0)
 			{
-				dianas[i].posX += dianas[i].velocidad;
+				gestionDianas->dianas[i].posX += gestionDianas->dianas[i].velocidad;
 			} 
-			else if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 != 0)
+			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 != 0)
 			{
-				dianas[i].posX -= dianas[i].velocidad;
+				gestionDianas->dianas[i].posX -= gestionDianas->dianas[i].velocidad;
 			}
 
-			if (ColisionMapa(estadoMapa->sala, dianas[i].posX, dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY + TAMANHO - 1) ||
-				ColisionMapa(estadoMapa->sala, dianas[i].posX, dianas[i].posY + TAMANHO - 1))
+			if (ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY) || 
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY) || 
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY + TAMANHO - 1) ||
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY + TAMANHO - 1))
 			{
-				dianas[i].posX = auxXDiana;
-				dianas[i].chocoConPared++;
+				gestionDianas->dianas[i].posX = auxXDiana;
+				gestionDianas->dianas[i].chocoConPared++;
 			}
 		}
 		
-		if (dianas[i].auxRanDianas == 2)
+		if (gestionDianas->dianas[i].auxRanDianas == 2)
 		{
-			if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 == 0)
+			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 == 0)
 			{
-				dianas[i].posY += dianas[i].velocidad;
+				gestionDianas->dianas[i].posY += gestionDianas->dianas[i].velocidad;
 			} 
-			else if (dianas[i].activa != 0 && dianas[i].chocoConPared%2 != 0)
+			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 != 0)
 			{
-				dianas[i].posY -= dianas[i].velocidad;
+				gestionDianas->dianas[i].posY -= gestionDianas->dianas[i].velocidad;
 			}
 
-			if (ColisionMapa(estadoMapa->sala, dianas[i].posX, dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, dianas[i].posX + TAMANHO - 1, dianas[i].posY + TAMANHO - 1) ||
-				ColisionMapa(estadoMapa->sala, dianas[i].posX, dianas[i].posY + TAMANHO - 1))
+			if (ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY) || 
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY) || 
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY + TAMANHO - 1) ||
+				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY + TAMANHO - 1))
 			{
-				dianas[i].posY = auxYDiana;
-				dianas[i].chocoConPared++;
+				gestionDianas->dianas[i].posY = auxYDiana;
+				gestionDianas->dianas[i].chocoConPared++;
 			}
 		}
 	}
@@ -3605,7 +3627,7 @@ void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMa
 	//printf("estadoMapa->sala vacia = %d", estadoMapa->salaVacia);
 }
 
-void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
 {
 	FILE *archivoHabitacion = NULL;
 	
@@ -3614,7 +3636,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] != NULL)
 		{
 			estadoMapa->actualMapaX --;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'E', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'E', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 		}
 
 		personaje.traspasoPuerta = 0;
@@ -3638,7 +3660,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] != NULL)
 		{
 			estadoMapa->actualMapaX ++;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'O', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'O', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3662,7 +3684,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY + 1][estadoMapa->actualMapaX] != NULL)
 		{
 			estadoMapa->actualMapaY ++;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'N', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'N', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3686,7 +3708,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY - 1][estadoMapa->actualMapaX] != NULL)
 		{
 			estadoMapa->actualMapaY --;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'S', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'S', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
 		}
 		
 		personaje.traspasoPuerta = 0;
