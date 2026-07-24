@@ -30,13 +30,11 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//IMPORTANTE:
-//BALAAAAAAAAAAAAAAAAAS
-//arreglo 3d
+//ayuda:
+//si eloy me banca el arreglo de punteros
 
 //Separar en funciones cargar mapa, sprites, colisiones
 //Mejorar diseño mapas
-//Arreglar reaparicion de dianas una vez destruidas
 //generacion aleatoria de arboles
 //Switch main
 //Arreglar problemas al reiniciar
@@ -46,9 +44,8 @@
 //Enemigo que te persiga y dispare tres balas
 
 //Ultimo:
-
-//Dos jugadores
 //Joystick
+//Dos jugadores
 //sonidos y musica
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
@@ -99,7 +96,7 @@ typedef struct
 	int cantidadLlaves;
 	int puntaje;
 	int rangoDeBalas;
-	int cantidadDeBalas;
+	int balasrestantes;
 	bala_ bala[MAX_BALAS]; 
 	int balasDisponibles;
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
@@ -152,6 +149,8 @@ typedef struct
 {
 	int posX;
 	int posY;
+	int fila;
+	int columna;
 	int activa;
 	int destruida;
 	int velocidad;
@@ -186,6 +185,7 @@ typedef struct
 	int fila;
 	int columna;
 	int fogataEncendida;
+	int dianaDestruida;
 } registroInteractuables_;
 
 typedef struct 
@@ -280,8 +280,8 @@ typedef struct
 
 typedef struct 
 {
-	//Estructura donde se guarda el estadoSistema->teclado del teclado y del mouse
-	ALLEGRO_KEYBOARD_STATE teclado; 
+	//Estructura donde se guarda el estado del teclado y del mouse
+	ALLEGRO_KEYBOARD_STATE teclado;
 	ALLEGRO_MOUSE_STATE mouse;
 
 	//timers para control de sprites general
@@ -354,7 +354,7 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void InitAllegro();
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, estadoSistema_ *estadoSistema);
 void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
@@ -380,7 +380,9 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa);
 void LogicaDianas(estadoMapa_ *estadoMapa);
 void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
 void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema);
-void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador, ranking_ *ranking);
+void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador);
+void GetRanking(FILE *archivoRanking, ranking_ *ranking);
+void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
 
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
@@ -424,7 +426,7 @@ int main(int argc, char **argv)
 	//Fonts
 	ALLEGRO_FONT *fuenteJuego;
 
-	//Variables texto	
+	//Variables char
 	char nombreHabitacion[LARGO_TEXTO] = "habBase.txt";
 	char fondoMenu[LARGO_TEXTO] = "menu_fondo_mapa.txt";
 
@@ -496,10 +498,10 @@ int main(int argc, char **argv)
 			Render(estadoMapa.sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa);
 
 			//Hacer descansar el cpu
-			al_rest(0.016); 
+			al_rest(0.016);
 		}
 
-		Ranking(archivoRanking, 0, ranking.nombre, personaje.puntaje, &ranking);
+		SetRanking(archivoRanking, &ranking, ranking.nombre, personaje.puntaje);
 
 		while (estadoJuego.REINICIAR)
 		{
@@ -516,68 +518,62 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void Ranking(FILE *archivoRanking, int obtenerRanking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador, ranking_ *ranking)
+void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador)
+{
+	//Si el jugador no puso nombre se le nombra anonimo
+	if (RegistrarJugador[0] == '\0')
+	{
+		strcpy(RegistrarJugador, "Anonimo");
+	}
+
+	//abrir archivo
+	archivoRanking = fopen("ranking.txt", "a");
+
+	//revisar que no esté nulo
+	if (archivoRanking == NULL) 
+	{
+		printf("Error al abrir el archivo"); 
+	}
+
+	//Editando archivo
+	fprintf(archivoRanking, "%s %d\n", RegistrarJugador, puntajeDelJugador);
+
+	//cerrando archivo;
+	fclose(archivoRanking);
+}
+
+void GetRanking(FILE *archivoRanking, ranking_ *ranking)
 {
 	//Variables donde se guardan los textos leidos
 	char nombreLeido[LARGO_TEXTO];
 	int puntajeLeido;
 	char linea[100];
 
-/// setRanking();
-	if (obtenerRanking == 0)
+	//abrir archivo
+	archivoRanking = fopen("ranking.txt", "r");
+
+	if (archivoRanking == NULL) 
 	{
-		//Si el jugador no puso nombre se le nombra anonimo
-		if (RegistrarJugador[0] == '\0')
-		{
-			strcpy(RegistrarJugador, "Anonimo");
-		}
-
-		//abrir archivo
-		archivoRanking = fopen("ranking.txt", "a");
-
-		//revisar que no esté nulo
-		if (archivoRanking == NULL) 
-		{
-			printf("Error al abrir el archivo"); 
-		}
-
-		//Editando archivo
-		fprintf(archivoRanking, "%s %d\n", RegistrarJugador, puntajeDelJugador);
-
-		//cerrando archivo;
-		fclose(archivoRanking);
+		printf("Error al abrir el archivo"); 
 	}
-	
 
-////// getRanking();
-	if (obtenerRanking == 1)
+	ranking->indiceNombres = 0;
+	ranking->indicePuntajes = 0;
+
+	//Se obtiene la primera linea del archivo
+	while (fgets(linea, 100, archivoRanking) != NULL)
 	{
-		//abrir archivo
-		archivoRanking = fopen("ranking.txt", "r");
+		//Se lee la linea y se deja los nombres y enteros 
+		sscanf(linea, "%s %d", nombreLeido, &puntajeLeido);
 
-		if (archivoRanking == NULL) 
-		{
-			printf("Error al abrir el archivo"); 
-		}
+		strcpy(ranking->nombres[ranking->indiceNombres], nombreLeido);
+		ranking->puntajes[ranking->indicePuntajes] = puntajeLeido;
 
-		ranking->indiceNombres = 0;
-		ranking->indicePuntajes = 0;
-
-		//Se obtiene la primera linea del archivo
-		while (fgets(linea, 100, archivoRanking) != NULL)
-		{
-			//Se lee la linea y se deja los nombres y enteros 
-			sscanf(linea, "%s %d", nombreLeido, &puntajeLeido);
-
-			strcpy(ranking->nombres[ranking->indiceNombres], nombreLeido);
-			ranking->puntajes[ranking->indicePuntajes] = puntajeLeido;
-
-			ranking->indiceNombres++;
-			ranking->indicePuntajes++;
-		}
-
-		fclose(archivoRanking);
+		ranking->indiceNombres++;
+		ranking->indicePuntajes++;
 	}
+
+	fclose(archivoRanking);
 }
 
 void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking, estadoSistema_ *estadoSistema)
@@ -598,7 +594,7 @@ void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *
 		{
 			controlMenu->verdaderaPantallaRanking = 1;
 
-			Ranking(archivoRanking, 1, ranking->nombre, personaje.puntaje, ranking);
+			GetRanking(archivoRanking, ranking);
 		}
 	}
 
@@ -789,22 +785,36 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
 	cadencia++;
 
-	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && personaje.cantidadDeBalas < MAX_BALAS)
+	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20 && personaje.balasrestantes > 0)
 	{
 		for (int i = 0; i < MAX_BALAS; i++)
 		{
 			if (personaje.bala[i].activa == 0)
 			{
+				//La bala nace del centro del personaje
 				personaje.bala[i].posX = personaje.posX + (TAMANHO/2);
 				personaje.bala[i].posY = personaje.posY + (TAMANHO/2);
+
+				//Se registra la posicion inicial de la bala
 				personaje.bala[i].posXNacimiento = personaje.posX + (TAMANHO/2);
 				personaje.bala[i].posYNacimiento = personaje.posY + (TAMANHO/2);
+
+				//Se activa la bala 
 				personaje.bala[i].activa = 1;
+
+				//Se obtiene el arcotangente en radianes entre la posicion del mouse y posicion del personaje
 				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
+
+				//Se obtiene el angulo en de las balas
 				personaje.bala[i].anguloBalaX = cos(direccionBala) * personaje.bala[i].velocidad;
 				personaje.bala[i].anguloBalaY = sin(direccionBala) * personaje.bala[i].velocidad;
-				personaje.cantidadDeBalas++;
+
+				//Se resta en 1 la capacidad de balas
+				personaje.balasrestantes--;
+
+				//se reinicia el timer entre disparos
 				cadencia = 0;
+
 				break;
 			}
 		}
@@ -813,12 +823,14 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 	//Aumenta constantemente personaje.bala[i].posY/personaje.bala[i].posX
 	for (int i = 0; i < MAX_BALAS; i++)
 	{
+		//Si la bala esta activa su posicion aumenta en favor del angulo
 		if (personaje.bala[i].activa != 0)
 		{
 			personaje.bala[i].posX += personaje.bala[i].anguloBalaX;
 			personaje.bala[i].posY += personaje.bala[i].anguloBalaY;
 		}
 
+		//Cuando colisiona con una pared se desactiva
 		if (ColisionMapa(estadoMapa->sala, personaje.bala[i].posX, personaje.bala[i].posY) || 
 		ColisionMapa(estadoMapa->sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY) || 
 		ColisionMapa(estadoMapa->sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY + (TAMANHO/4) - 1) ||
@@ -1019,14 +1031,9 @@ void HandicapsMejorables()
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 {
-	int muerto = 0;
-	int cofreAbierto = 0;
-	int fogataEncendida = 0;
-	int cargadorObtenido = 0;
-	int auxRandTienda = 0;
-	int productoTiendaGenerado = 0;
+	
 	controlIndices->aranha = 0;
 	controlIndices->mago = 0;
 	controlIndices->slime = 0;
@@ -1036,11 +1043,6 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	estadoMapa->salaVacia = 0;
 	estadoMapa->seGeneroUnaRecompensa = 0;
 	dianasActuales = 0;
-
-	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
-	{
-		return 0;
-	} 
 
 	//Reinicio de enemigos
 	for (int k = 0; k < MAX_ENEMIGOS; k++)
@@ -1104,7 +1106,26 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	{
 		dianas[i].activa = 0;
 	}
-	
+}
+
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+{
+	//Variables locales temporales donde se guardan los registros por llamada
+	int muerto = 0;
+	int cofreAbierto = 0;
+	int fogataEncendida = 0;
+	int cargadorObtenido = 0;
+	int auxRandTienda = 0;
+	int productoTiendaGenerado = 0;
+	int dianaDestruida = 0;
+
+	if ((archivoMapa = fopen(nombreMapa,"r")) == NULL)
+	{
+		return 0;
+	} 
+
+	DesactivarObjetosActivos(gestionEnemigos, controlIndices, gestionObjetos, estadoMapa);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	for (int i = 0; i < FILAS_HABITACION; i++) 
@@ -1335,15 +1356,27 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 			if (mapa[i][j] == 'D')
 			{
-				if (dianas[dianasActuales].destruida == 0)
+				dianaDestruida = 0;
+
+				for (int k = 0; k < MAX_REGISTROS; k++)
+				{
+					if (registroInteractuables[k].mapaX == estadoMapa->actualMapaX && registroInteractuables[k].mapaY == mapaY && registroInteractuables[k].fila == i && registroInteractuables[k].columna == j && registroInteractuables[k].dianaDestruida == 1)
+					{
+						dianaDestruida = 1;
+					}
+				}
+
+				if (dianaDestruida == 0)
 				{
 					dianas[dianasActuales].posX = j * TAMANHO;
 					dianas[dianasActuales].posY = i * TAMANHO;
+					dianas[dianasActuales].fila = i;
+					dianas[dianasActuales].columna = j;
 					dianas[dianasActuales].activa = 1;
 					dianasActuales++;
-
-					estadoMapa->seGeneroUnaRecompensa++;
 				}
+
+				estadoMapa->seGeneroUnaRecompensa++;
 			}
 
 			if (dianasActuales >= MAX_DIANAS)
@@ -1746,7 +1779,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 
 	//Balas Jugador
 	al_draw_scaled_bitmap(spriteSheetBalas, 2 * 16, 0 * 16, 16, 16, LARGO_PANTALLA - 350, ANCHO_PANTALLA - 200, TAMANHO * 3, TAMANHO * 3, 0); 
-	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", -personaje.cantidadDeBalas + MAX_BALAS, MAX_BALAS);
+	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), LARGO_PANTALLA - 200, ANCHO_PANTALLA - 120, 0, "%d/%d", personaje.balasrestantes, MAX_BALAS);
 
 	//Puntaje Jugador
 	al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), TAMANHO * 23, TAMANHO, 0, "Puntaje: %d", personaje.puntaje);
@@ -1996,12 +2029,12 @@ void InitAllegro()
 	al_init_ttf_addon();
 }
 
-int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
-	if(!ventana) return -1;
+	if(!ventana) printf("Error al abrir ventana");
 
 	ranking->indiceNombres = 0;
 	ranking->indicePuntajes = 0;
@@ -2041,7 +2074,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 	personaje.cantidadMonedas = 200; ///////// 0
 	personaje.cantidadLlaves = 2; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
-	personaje.cantidadDeBalas = 0;
+	personaje.balasrestantes = 20;
 	personaje.puntaje = 0;
 
 	//Inicializando enemigos
@@ -2106,7 +2139,7 @@ int InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *rankin
 		personaje.bala[i].posY = 0;
 		personaje.bala[i].velocidad = 10;		
 		personaje.bala[i].activa = 0;
-		personaje.bala[i].danho = 3;               ///// originalmente 1
+		personaje.bala[i].danho = 1;              
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 
@@ -2332,38 +2365,38 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites <= 20)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites <= 30)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites <= 40)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 		}
 		else if (personaje.dirJugador.derecha != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
-				al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites <= 20)
 			{
-				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites <= 30)
 			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites <= 40)
 			{
-				al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 		}
 
@@ -2372,38 +2405,38 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites <= 20)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites <= 30)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites <= 40)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 		}
 		else if (personaje.dirJugador.izquierda != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
-				al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites <= 20)
 			{
-				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites <= 30)
 			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites <= 40)
 			{
-				al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 		}
 	} 
@@ -2414,38 +2447,38 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites < 20)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites < 30)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites < 40)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 		}
 		else if (personaje.dirJugador.derecha != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
-				al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites < 20)
 			{
-				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites < 30)
 			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites < 40)
 			{
-				al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, ALLEGRO_FLIP_HORIZONTAL);	
 			}
 		}
 
@@ -2454,38 +2487,38 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites < 20)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites < 30)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites < 40)
 			{
-				al_draw_bitmap_region(spriteSheetCaminarCaballero, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheetCaminarCaballero, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 		}
 		else if (personaje.dirJugador.izquierda != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
-				al_draw_bitmap_region(spriteSheet, 0 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 8 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 10 && estadoSistema->controlSprites < 20)
 			{
-				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 9 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 20 && estadoSistema->controlSprites < 30)
 			{
-				al_draw_bitmap_region(spriteSheet, 2 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 10 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 			if (estadoSistema->controlSprites > 30 && estadoSistema->controlSprites < 40)
 			{
-				al_draw_bitmap_region(spriteSheet, 3 * TAMANHO, 23 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
+				al_draw_bitmap_region(spriteSheet, 11 * TAMANHO, 24 * TAMANHO, TAMANHO, TAMANHO, personaje.posX, personaje.posY, 0);	
 			}
 		}
 	}
@@ -3164,7 +3197,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 	{
 		if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->mapaNaranjo.posX, gestionObjetos->mapaNaranjo.posY, TAMANHO, TAMANHO))
 		{
-			gestionObjetos->mapaNaranjo.activa = 0;	
+			gestionObjetos->mapaNaranjo.activa = 0;
 			gestionObjetos->mapaNaranjo.seObtuvo = 1;
 		}
 	}
@@ -3190,13 +3223,10 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 			}
 		}
 
-		//Colicion con gestionObjetos->llaves
-		if (
-			gestionObjetos->llaves[i].activa != 0)
+		//Colicion con llaves
+		if (gestionObjetos->llaves[i].activa != 0)
 		{
-			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, 
-				gestionObjetos->llaves[i].posX, 
-				gestionObjetos->llaves[i].posY, TAMANHO, TAMANHO))
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->llaves[i].posX, gestionObjetos->llaves[i].posY, TAMANHO, TAMANHO))
 			{
 				
 				gestionObjetos->llaves[i].activa = 0;
@@ -3204,12 +3234,12 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 			}
 		}
 
-		//Colicion con gestionObjetos->municiones
+		//Colicion con municiones
 		if (gestionObjetos->municiones[i].activa != 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->municiones[i].posX, gestionObjetos->municiones[i].posY, TAMANHO, TAMANHO))
 			{
-				personaje.cantidadDeBalas = 0;
+				personaje.balasrestantes = MAX_BALAS;
 				gestionObjetos->municiones[i].activa = 0;
 
 				registroRecompensas[cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
@@ -3332,7 +3362,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 			}
 		}
 		
-		//Colicion con gestionObjetos->cofres
+		//Colicion con cofres
 		if (gestionObjetos->cofres[i].activa != 0)
 		{
 			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->cofres[i].posX, gestionObjetos->cofres[i].posY, TAMANHO, TAMANHO) && personaje.cantidadLlaves > 0 && gestionObjetos->cofres[i].cofreAbierto == 0)
@@ -3448,6 +3478,13 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa)
 						personaje.bala[j].activa = 0;
 						dianas[i].activa = 0;
 						dianas[i].destruida = 1;
+
+						registroInteractuables[cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
+						registroInteractuables[cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
+						registroInteractuables[cantidadInteractuables].fila = dianas[i].fila;
+						registroInteractuables[cantidadInteractuables].columna = dianas[i].columna;
+						registroInteractuables[cantidadInteractuables].dianaDestruida = 1;
+						cantidadInteractuables++;
 					}
 				}
 			}
@@ -3709,6 +3746,7 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 	int tiendaGenerada = 0;
 
 	//La habitacion central siempre será la misma
+	//mapa es un arreglo de punteros, "habBase.txt" es automaticamente una direccion de puntero
 	estadoMapa->mapa[FILAS_MAPA / 2 + 1][COLUMNAS_MAPA / 2 + 1] = "habBase.txt";
 	
 	while (a < cantidadHabitacionesDeseadas)
