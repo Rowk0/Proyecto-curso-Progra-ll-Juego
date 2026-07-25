@@ -6,6 +6,8 @@
 #include <allegro5/allegro_image.h>
 #include <math.h>
 #include <allegro5/allegro_ttf.h>
+#include <allegro5/allegro_audio.h>
+#include <allegro5/allegro_acodec.h>
 #define FILAS_HABITACION 17
 #define COLUMNAS_HABITACION 30
 #define FILAS_MAPA 9
@@ -30,7 +32,6 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Mejor diseño ranking
 //sonidos y musica
 
 //Al disparar una diana, salir, volver y disparar todas no sale el mapa
@@ -48,7 +49,7 @@
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
-//gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image -lm -lallegro_ttf -lallegro_font
+//gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image -lm -lallegro_ttf -lallegro_font -lallegro_audio -lallegro_acodec
 //para compilar
 
 //./juego 
@@ -58,6 +59,9 @@
 
 //flujo git (antes ctrl + s para guardar archivo local)
 //git add . -> git commit -m "cambios" -> git push.
+
+//Convertir mp3 a ogg
+//ffmpeg -i musica1.mp3 musica1.ogg
 
 ////////////////////////////////////////////////////////////////// Estructuras
 
@@ -88,7 +92,7 @@ typedef struct
 	int posX;
 	int posY;
 	int velocidad;
-	int movimientoJugador;
+	int animacionJugador;
 	struct dirJugador_ dirJugador;
 	int vidas;
 	int invulnerable;
@@ -341,6 +345,12 @@ typedef struct
 } registroMundo_;
 
 
+typedef struct 
+{
+	ALLEGRO_AUDIO_STREAM *musica;
+	ALLEGRO_SAMPLE *sonido;
+} controlAudio_;
+
 ///////////////////////////////////////////////////////////////// Variables globales
 
 jugador personaje;
@@ -352,8 +362,8 @@ mouse_ mouse;
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
 char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking);
-void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking, controlAudio_ *controlAudio);
+void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, controlAudio_ *controlAudio);
 void InitAllegro();
 void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, estadoSistema_ *estadoSistema);
@@ -373,7 +383,7 @@ void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 void LogicaJefe(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa);
 void HandicapsMejorables();
 void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking, estadoSistema_ *estadoSistema);
-void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
+void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo, controlAudio_ *controlAudio);
 void RangoVisionEnemigo(gestionEnemigos_ *gestionEnemigos);
 void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa);
 void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
@@ -384,7 +394,8 @@ void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema);
 void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador);
 void GetRanking(FILE *archivoRanking, ranking_ *ranking);
 void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
-
+void Musica(controlAudio_ *controlAudio, char *nombreMusica);
+void Sonido(controlAudio_ *controlAudio, int indiceSonido);
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
@@ -441,6 +452,7 @@ int main(int argc, char **argv)
 	gestionDianas_ gestionDianas;
 	gestionInteractuables_ gestionInteractuables;
 	registroMundo_ registroMundo;
+	controlAudio_ controlAudio;
 	
 	///////////////////////////////////////////////////////////////
 
@@ -477,6 +489,8 @@ int main(int argc, char **argv)
 		//El entero representa la cantidad de habitaciones deseadas para generar en el mapa, va de la mano con FILAS_MAPA Y COLUMNAS_MAPA
 		GeneracionDelMapa(20, &estadoMapa); 
 
+		Musica(&controlAudio, "musica1.ogg");
+
 		while (estadoJuego.MENU)
 		{
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
@@ -490,13 +504,15 @@ int main(int argc, char **argv)
 
 		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
+		Musica(&controlAudio, "musica2.ogg");
+
 		while (estadoJuego.JUEGO)
 		{
 			//Funcion que actualiza el estadoSistema->teclado del teclado y mouse
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
 			//Logica del juego. Ej: movimientos del jugador
-			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo, &ranking, archivoRanking);
+			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo, &ranking, archivoRanking, &controlAudio);
 
 			//Dibujar aqui
 			Render(estadoMapa.sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
@@ -517,7 +533,54 @@ int main(int argc, char **argv)
 		}
 	}
 
+	//Evitar fallas de memoria
+	//Destruir musica al salir del programa
+	if (controlAudio.musica != NULL) 
+	{
+    	al_destroy_audio_stream(controlAudio.musica);
+	}
+
+	al_uninstall_audio();
+
 	return 0;
+}
+
+void Sonido(controlAudio_ *controlAudio, int indiceSonido)
+{
+	if (indiceSonido == 1)
+	{
+		controlAudio->sonido = al_load_sample("audio_moneda.ogg");
+	}
+
+	if (controlAudio->sonido != NULL)
+	{
+		printf("ERROR AL CARGAR SONIDO");
+	}
+
+	al_play_sample(controlAudio->sonido, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+}
+
+void Musica(controlAudio_ *controlAudio, char *nombreMusica)
+{
+	//Si hay pista al llamar Musica(), se detruye para poner la siguiente
+	if (controlAudio->musica != NULL) 
+	{
+    	al_destroy_audio_stream(controlAudio->musica);
+	}
+
+	//Se asigna el mp3 a una variable tipo audio stream
+	controlAudio->musica = al_load_audio_stream(nombreMusica, 4, 2048);
+
+    if (!controlAudio->musica)
+    {
+        printf("ERROR MUSICA");
+    }
+
+	//Mode de musica, loop
+	al_set_audio_stream_playmode(controlAudio->musica, ALLEGRO_PLAYMODE_LOOP);
+
+	//Se conecta el audio al mezclador
+	al_attach_audio_stream_to_mixer(controlAudio->musica, al_get_default_mixer());
 }
 
 void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador)
@@ -662,7 +725,8 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 
 		for (int i = 0; i < ranking->indiceNombres; i++)
 		{
-			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 400, 100 + i * 40, 0, "%s - %d", ranking->nombres[i], ranking->puntajes[i]);
+			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 400, 100 + i * 40, 0, "%s", ranking->nombres[i]);
+			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 1500, 100 + i * 40, 0, "%d", ranking->puntajes[i]);
 		}
 
 		al_draw_filled_rectangle(100, 900, 300, 1050, al_map_rgb(255, 255, 255));
@@ -699,9 +763,9 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_flip_display();
 }
 
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking)
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking, controlAudio_ *controlAudio)
 {
-	MovimientoJugador(estadoSistema, estadoMapa);
+	MovimientoJugador(estadoSistema, estadoMapa, controlAudio);
 
 	PersonajeInvulnerable();
 
@@ -715,7 +779,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 
 	VerificarTraspasoPuertas(mapa, jugador);
 
-	ColicionObjetos(gestionObjetos, estadoMapa, registroMundo);
+	ColicionObjetos(gestionObjetos, estadoMapa, registroMundo, controlAudio);
 
 	ColicionInteractuables(estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 
@@ -978,7 +1042,7 @@ void PersonajeInvulnerable()
 	}
 }
 
-void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
+void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, controlAudio_ *controlAudio)
 {
 	//Guardamos la posicion del jugador en un axiliar
 	int auxX = personaje.posX;
@@ -987,13 +1051,13 @@ void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 	if(al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_W))
 	{
 		personaje.posY -= personaje.velocidad; 
-		personaje.movimientoJugador = 1;
+		personaje.animacionJugador = 1;
 	}
 
 	if(al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_S))
 	{
 		personaje.posY += personaje.velocidad; 
-		personaje.movimientoJugador = 1;
+		personaje.animacionJugador = 1;
 	}
 
 	//Luego de verificar la posY se comprueba si cada esquina del jugador está en colision con '#' en el arreglo del mapa
@@ -1010,7 +1074,9 @@ void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 		personaje.posX += personaje.velocidad; 
 		personaje.dirJugador.derecha = 1;
 		personaje.dirJugador.izquierda = 0;
-		personaje.movimientoJugador = 1;
+		personaje.animacionJugador = 1;
+
+		
 	}
 
 	if(al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_A))
@@ -1018,7 +1084,9 @@ void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 		personaje.posX -= personaje.velocidad; 
 		personaje.dirJugador.derecha = 0;
 		personaje.dirJugador.izquierda = 1;
-		personaje.movimientoJugador = 1;
+		personaje.animacionJugador = 1;
+
+		
 	}
 
 	if (ColisionMapa(estadoMapa->sala, personaje.posX, personaje.posY) || 
@@ -2034,8 +2102,14 @@ void InitAllegro()
 
 	//Inicializar fuentes de texto
 	al_init_font_addon();
-
 	al_init_ttf_addon();
+
+	//Inicializando musica y samples
+	al_install_audio();
+	al_init_acodec_addon();
+
+	//Se abre un mixer donde 10 sonidos suceden a la vez 
+	al_reserve_samples(10);
 }
 
 void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
@@ -2080,7 +2154,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 
 	//Inicializando jugador
 	personaje.velocidad = 16; ////////// 7
-	personaje.movimientoJugador = 0;
+	personaje.animacionJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
 	personaje.vidas = 6;
@@ -2378,13 +2452,11 @@ void MovimientoCamara()
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, estadoSistema_ *estadoSistema)
 {
 	estadoSistema->controlSprites += 1;
-
-	printf("%d", personaje.movimientoJugador);
 	
 	if (personaje.invulnerable == 0)
 	{
 		//Personaje caminando hacia la derecha
-		if (personaje.dirJugador.derecha != 0 && personaje.movimientoJugador != 0)
+		if (personaje.dirJugador.derecha != 0 && personaje.animacionJugador != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
@@ -2424,7 +2496,7 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		}
 
 		//Personaje caminando hacia la izquierda
-		if (personaje.dirJugador.izquierda != 0 && personaje.movimientoJugador != 0)
+		if (personaje.dirJugador.izquierda != 0 && personaje.animacionJugador != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites <= 10)
 			{
@@ -2466,7 +2538,7 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 	else if (PersonajeInvulnerable > 0)
 	{
 		//Personaje caminando hacia la derecha
-		if (personaje.dirJugador.derecha != 0 && personaje.movimientoJugador != 0)
+		if (personaje.dirJugador.derecha != 0 && personaje.animacionJugador != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
@@ -2506,7 +2578,7 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		}
 
 		//Personaje caminando hacia la izquierda
-		if (personaje.dirJugador.izquierda != 0 && personaje.movimientoJugador != 0)
+		if (personaje.dirJugador.izquierda != 0 && personaje.animacionJugador != 0)
 		{
 			if (estadoSistema->controlSprites > 0 && estadoSistema->controlSprites < 10)
 			{
@@ -2551,7 +2623,7 @@ void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheet
 		estadoSistema->controlSprites = 0;
 	}
 
-	personaje.movimientoJugador = 0;
+	personaje.animacionJugador = 0;
 }
 
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, gestionEnemigos_ *gestionEnemigos, estadoSistema_ *estadoSistema)
@@ -3185,7 +3257,7 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 	}
 }
 
-void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
+void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo, controlAudio_ *controlAudio)
 {
 	int auxRand = 0;
 
@@ -3237,11 +3309,15 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 				{
 					gestionObjetos->monedas[i].activa = 0;
 					personaje.cantidadMonedas += 10;
+
+					Sonido(controlAudio, 1);
 				}
 				else
 				{
 					gestionObjetos->monedas[i].activa = 0;
 					personaje.cantidadMonedas ++;
+
+					Sonido(controlAudio, 1);
 				}
 			}
 		}
