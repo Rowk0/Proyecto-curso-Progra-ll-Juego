@@ -30,10 +30,11 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Bajar totalmente las variables globales
-//sonidos y musica
 //Mejor diseño ranking
+//sonidos y musica
 
+//Al disparar una diana, salir, volver y disparar todas no sale el mapa
+//retencion de objetos como la moneda
 //Mejorar diseño mapas
 //Arreglar problemas al reiniciar
 
@@ -73,6 +74,7 @@ typedef	struct
 	int posXNacimiento;
 	int posYNacimiento;
 	int seDisparo;
+	float direccionBala;
 } bala_;
 
 struct dirJugador_
@@ -98,6 +100,7 @@ typedef struct
 	bala_ bala[MAX_BALAS]; 
 	int balasDisponibles;
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
+	int cadencia;
 } jugador;
 
 typedef struct 
@@ -111,20 +114,25 @@ typedef struct
 {
 	int posX;
 	int posY;
-	int velocidad;
-	int activa;
-	int direccion; //1 = derecha, 2 = izquierda, 3 = arriba, 4 = abajo
-	int vida;
-	int posXGeneracion;
-	int posYGeneracion;
-	bala_ bala[MAX_BALAS];
 	int posXAnterior;
 	int posYAnterior;
+	int posXGeneracion;
+	int posYGeneracion;
+	int velocidad;
+	int activa;
+	int direccion; 
+	int vida;
+	bala_ bala[MAX_BALAS];
+	int balaActual;
 	int ataquesEnemigos;
 	int chocoConPared;
 	int auxRandAranha;
 	int rangoDeBalas;
 	int indiceEnemigo;
+	int cadencia;
+
+	//Control de movimiento del jefe
+	int timerMovimientoJefe;
 } enemigo;
  
 typedef struct 
@@ -319,43 +327,21 @@ typedef struct
 
 typedef struct 
 {
-	/* data */
+	registroTienda_ registroTienda[MAX_REGISTROS];
+	int indiceTienda;
+
+	registroInteractuables_ registroInteractuables[MAX_REGISTROS];
+	int cantidadInteractuables;
+
+	registroRecompensas_ registroRecompensas[MAX_REGISTROS];
+	int cantidadRecompensas;
+
+	registroMuertes_ registroMuertes[MAX_REGISTROS];
+	int cantidadMuertos;
 } registroMundo_;
 
 
 ///////////////////////////////////////////////////////////////// Variables globales
-
-registroTienda_ registroTienda[MAX_REGISTROS];
-int indiceTienda = 0;
-
-registroInteractuables_ registroInteractuables[MAX_REGISTROS];
-int cantidadInteractuables = 0;
-
-registroRecompensas_ registroRecompensas[MAX_REGISTROS];
-int cantidadRecompensas = 0;
-
-registroMuertes_ registroMuertes[MAX_REGISTROS];
-int cantidadMuertos = 0;
-
-////////////////////////////////////////////////////////
-
-//Control de balas
-int balaActualEnemigo = 0;
-
-//cadencia de disparo
-int cadencia = 0;
-int cadenciaEnemigo = 0;
-
-//Se guarda la direccion de la bala en base al mouse
-float direccionBala = 0.0;
-float direccionBalaEnemigo = 0.0; 
-
-////////////////////////////////////////////////////// ENEMIGO
-
-//Control de movimiento del jefe
-int timerMovimientoJefe = 0;
-
-////////////////////////////////////////////////////////////////
 
 jugador personaje;
 
@@ -364,21 +350,21 @@ mouse_ mouse;
 /////////////////////////////////////////////////////////////////  Funciones
 
 void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *varMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorPosXProximo, int jugadorPosYProximo);
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking);
 void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void InitAllegro();
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, estadoSistema_ *estadoSistema);
 void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa);
 void MovimientoCamara();
 void AnimacionPersonaje(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, estadoSistema_ *estadoSistema);
 void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, gestionEnemigos_ *gestionEnemigos, estadoSistema_ *estadoSistema);
-void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
+void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
+void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
@@ -387,11 +373,11 @@ void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 void LogicaJefe(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa);
 void HandicapsMejorables();
 void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, FILE *archivoRanking, estadoSistema_ *estadoSistema);
-void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
+void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
 void RangoVisionEnemigo(gestionEnemigos_ *gestionEnemigos);
 void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa);
-void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa);
-void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
+void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
+void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
 void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas);
 void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
 void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema);
@@ -454,6 +440,7 @@ int main(int argc, char **argv)
 	estadoMapa_ estadoMapa;
 	gestionDianas_ gestionDianas;
 	gestionInteractuables_ gestionInteractuables;
+	registroMundo_ registroMundo;
 	
 	///////////////////////////////////////////////////////////////
 
@@ -482,10 +469,10 @@ int main(int argc, char **argv)
 	//Si sistema es 0 el programa se cierra
 	while (estadoJuego.SISTEMA)
 	{
-		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
+		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
 		//Cargar mapa hace que se lea un archivo y genere una copia en estadoMapa->sala
-		cargarMapa(fondoMenu, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables);
+		cargarMapa(fondoMenu, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
 		//El entero representa la cantidad de habitaciones deseadas para generar en el mapa, va de la mano con FILAS_MAPA Y COLUMNAS_MAPA
 		GeneracionDelMapa(20, &estadoMapa); 
@@ -501,7 +488,7 @@ int main(int argc, char **argv)
 			al_rest(0.016);
 		}
 
-		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables);
+		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
 		while (estadoJuego.JUEGO)
 		{
@@ -509,7 +496,7 @@ int main(int argc, char **argv)
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
 			//Logica del juego. Ej: movimientos del jugador
-			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
+			Logica(estadoMapa.sala, &personaje, &estadoJuego, &controlIndices, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo, &ranking, archivoRanking);
 
 			//Dibujar aqui
 			Render(estadoMapa.sala, spriteSheet, spriteSheetBalas, spriteSheetCaminarCaballero, spriteSheetIcons, fuenteJuego, spriteSheetCrosshair, spriteSheetBalasEnemigos, spriteSheetIconsRaven, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables);
@@ -517,8 +504,6 @@ int main(int argc, char **argv)
 			//Hacer descansar el cpu
 			al_rest(0.016);
 		}
-
-		SetRanking(archivoRanking, &ranking, ranking.nombre, personaje.puntaje);
 
 		while (estadoJuego.REINICIAR)
 		{
@@ -714,7 +699,7 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_flip_display();
 }
 
-void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
+void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking)
 {
 	MovimientoJugador(estadoSistema, estadoMapa);
 
@@ -726,19 +711,19 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 
 	//MovimientoCamara();
 
-	LogicaEnemigos(gestionEnemigos, gestionObjetos, estadoMapa);
+	LogicaEnemigos(gestionEnemigos, gestionObjetos, estadoMapa, registroMundo);
 
 	VerificarTraspasoPuertas(mapa, jugador);
 
-	ColicionObjetos(gestionObjetos, estadoMapa);
+	ColicionObjetos(gestionObjetos, estadoMapa, registroMundo);
 
-	ColicionInteractuables(estadoMapa, gestionDianas, gestionInteractuables);
+	ColicionInteractuables(estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 
-	CambioDeHabitaciones(controlIndices, gestionEnemigos, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+	CambioDeHabitaciones(controlIndices, gestionEnemigos, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 
 	VerificarSalaVacia(gestionEnemigos, estadoMapa);
 
-	GeneracionDeRecompensas(gestionObjetos, estadoMapa);
+	GeneracionDeRecompensas(gestionObjetos, estadoMapa, registroMundo);
 
 	LogicaDianas(estadoMapa, gestionDianas);
 	
@@ -750,6 +735,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	{
 		estadoJuego->JUEGO = 0;
 		estadoJuego->REINICIAR = 1;
+
+		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
 
 	//Verificar evento de gestionDianas->dianas
@@ -794,15 +781,17 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	{
 		estadoJuego->JUEGO = 0;
 		estadoJuego->REINICIAR = 1;
+
+		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
 }
 
 void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 {
 	//Como Disparo() se encuentra en while, cada llamada se va acumulando en cadencia, lo usaremos como una especie de timer
-	cadencia++;
+	personaje.cadencia++;
 
-	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && cadencia > 20)
+	if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT) && personaje.cadencia > 20)
 	{
 		for (int i = 0; i < MAX_BALAS; i++)
 		{
@@ -824,14 +813,14 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa)
 				personaje.balasrestantes--;
 
 				//Se obtiene el arcotangente en radianes entre la posicion del mouse y posicion del personaje
-				direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
+				personaje.bala[i].direccionBala = atan2(mouse.posY - personaje.posY, mouse.posX - personaje.posX); //atan2(y2 - y1, x2 - x1)
 
 				//Se obtiene el angulo en de las balas
-				personaje.bala[i].anguloBalaX = cos(direccionBala) * personaje.bala[i].velocidad;
-				personaje.bala[i].anguloBalaY = sin(direccionBala) * personaje.bala[i].velocidad;
+				personaje.bala[i].anguloBalaX = cos(personaje.bala[i].direccionBala) * personaje.bala[i].velocidad;
+				personaje.bala[i].anguloBalaY = sin(personaje.bala[i].direccionBala) * personaje.bala[i].velocidad;
 
 				//se reinicia el timer entre disparos
-				cadencia = 0;
+				personaje.cadencia = 0;
 
 				break;
 			}
@@ -865,29 +854,29 @@ void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 
 	///////////////////////////////////////////////////////////// DISPARO JEFE
 
-	cadenciaEnemigo ++;
+	gestionEnemigos->jefe.cadencia ++;
 
-	if (cadenciaEnemigo > 20 && gestionEnemigos->jefe.activa != 0)
+	if (gestionEnemigos->jefe.cadencia > 20 && gestionEnemigos->jefe.activa != 0)
 	{
-		gestionEnemigos->jefe.bala[balaActualEnemigo].posX = gestionEnemigos->jefe.posX + TAMANHO;
-		gestionEnemigos->jefe.bala[balaActualEnemigo].posY = gestionEnemigos->jefe.posY + TAMANHO;
-		gestionEnemigos->jefe.bala[balaActualEnemigo].posXNacimiento = gestionEnemigos->jefe.posX + TAMANHO;
-		gestionEnemigos->jefe.bala[balaActualEnemigo].posYNacimiento = gestionEnemigos->jefe.posY + TAMANHO;
-		gestionEnemigos->jefe.bala[balaActualEnemigo].activa = 1;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].posX = gestionEnemigos->jefe.posX + TAMANHO;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].posY = gestionEnemigos->jefe.posY + TAMANHO;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].posXNacimiento = gestionEnemigos->jefe.posX + TAMANHO;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].posYNacimiento = gestionEnemigos->jefe.posY + TAMANHO;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].activa = 1;
 
-		direccionBalaEnemigo = atan2(personaje.posY - gestionEnemigos->jefe.posY, personaje.posX - gestionEnemigos->jefe.posX); //atan2(y2 - y1, x2 - x1)
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].direccionBala = atan2(personaje.posY - gestionEnemigos->jefe.posY, personaje.posX - gestionEnemigos->jefe.posX); //atan2(y2 - y1, x2 - x1)
 
-		gestionEnemigos->jefe.bala[balaActualEnemigo].anguloBalaX = cos(direccionBalaEnemigo) * gestionEnemigos->jefe.bala[balaActualEnemigo].velocidad;
-		gestionEnemigos->jefe.bala[balaActualEnemigo].anguloBalaY = sin(direccionBalaEnemigo) * gestionEnemigos->jefe.bala[balaActualEnemigo].velocidad;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].anguloBalaX = cos(gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].direccionBala) * gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].velocidad;
+		gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].anguloBalaY = sin(gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].direccionBala) * gestionEnemigos->jefe.bala[gestionEnemigos->jefe.balaActual].velocidad;
 
-		balaActualEnemigo++;
-		cadenciaEnemigo = 0;
+		gestionEnemigos->jefe.balaActual++;
+		gestionEnemigos->jefe.cadencia = 0;
 	}
 
 	//Cuando el arreglo este a punto de terminar, se reinicia
-	if (balaActualEnemigo > MAX_BALAS - 1)
+	if (gestionEnemigos->jefe.balaActual > MAX_BALAS - 1)
 	{
-		balaActualEnemigo = 0;
+		gestionEnemigos->jefe.balaActual = 0;
 	}
 
 	for (int i = 0; i < MAX_BALAS; i++)
@@ -916,7 +905,9 @@ void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
-		if (cadenciaEnemigo > 20 && gestionEnemigos->mago[i].activa != 0 && gestionEnemigos->mago[i].ataquesEnemigos == 1)
+		gestionEnemigos->mago[i].cadencia++;
+
+		if (gestionEnemigos->mago[i].cadencia > 20 && gestionEnemigos->mago[i].activa != 0 && gestionEnemigos->mago[i].ataquesEnemigos == 1)
 		{
 			for (int j = 0; j < MAX_BALAS; j++)
 			{
@@ -939,12 +930,13 @@ void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 				}
 			}
 		}	
+
+		if (aux == 1)
+		{
+			gestionEnemigos->mago[i].cadencia = 0;
+		}
 	}
 	
-	if (aux == 1)
-	{
-		cadenciaEnemigo = 0;
-	}
 	
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
@@ -1125,7 +1117,7 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 	}
 }
 
-char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
+char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, gestionEnemigos_ *gestionEnemigos, char puertaDestino, int mapaX, int mapaY, controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
 {
 	//Variables locales temporales donde se guardan los registros por llamada
 	int muerto = 0;
@@ -1165,11 +1157,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				
 				for (int k = 0; k < MAX_REGISTROS; k++)
 				{
-					if (registroTienda[k].columna == j && registroTienda[k].fila == i && registroTienda[k].mapaX == estadoMapa->actualMapaX && registroTienda[k].mapaY == estadoMapa->actualMapaY)
+					if (registroMundo->registroTienda[k].columna == j && registroMundo->registroTienda[k].fila == i && registroMundo->registroTienda[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroTienda[k].mapaY == estadoMapa->actualMapaY)
 					{
 						productoTiendaGenerado = 1;
 
-						if (registroTienda[k].idObjeto == 1 && registroTienda[k].comprado == 0)
+						if (registroMundo->registroTienda[k].idObjeto == 1 && registroMundo->registroTienda[k].comprado == 0)
 						{
 							gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].activa = 1;
 							gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].posX = j * TAMANHO;
@@ -1180,7 +1172,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 							gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].precio = 10;
 							gestionObjetos->mejoraDanhoActual++;
 						}
-						else if (registroTienda[k].idObjeto == 2 && registroTienda[k].comprado == 0)
+						else if (registroMundo->registroTienda[k].idObjeto == 2 && registroMundo->registroTienda[k].comprado == 0)
 						{
 							gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].activa = 1;
 							gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].posX = j * TAMANHO;
@@ -1191,7 +1183,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 							gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].precio = 15;
 							gestionObjetos->mejoraRangoActual++;
 						}
-						else if (registroTienda[k].idObjeto == 3 && registroTienda[k].comprado == 0)
+						else if (registroMundo->registroTienda[k].idObjeto == 3 && registroMundo->registroTienda[k].comprado == 0)
 						{
 							gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].activa = 1;
 							gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].posX = j * TAMANHO;
@@ -1218,16 +1210,16 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].posY = i * TAMANHO - 30;
 						gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].seVende = 1;
 						gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].precio = 10;
-						gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].idRegistro = indiceTienda;
+						gestionObjetos->mejoraDanho[gestionObjetos->mejoraDanhoActual].idRegistro = registroMundo->indiceTienda;
 						gestionObjetos->mejoraDanhoActual++;
 
-						registroTienda[indiceTienda].columna = j;
-						registroTienda[indiceTienda].fila = i;
-						registroTienda[indiceTienda].mapaX = estadoMapa->actualMapaX;
-						registroTienda[indiceTienda].mapaY = estadoMapa->actualMapaY;
-						registroTienda[indiceTienda].idObjeto = 1;
-						registroTienda[indiceTienda].comprado = 0;
-						indiceTienda++;
+						registroMundo->registroTienda[registroMundo->indiceTienda].columna = j;
+						registroMundo->registroTienda[registroMundo->indiceTienda].fila = i;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroTienda[registroMundo->indiceTienda].idObjeto = 1;
+						registroMundo->registroTienda[registroMundo->indiceTienda].comprado = 0;
+						registroMundo->indiceTienda++;
 					}
 					else if (auxRandTienda == 2)
 					{
@@ -1236,16 +1228,16 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].posY = i * TAMANHO - 30;
 						gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].seVende = 1;
 						gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].precio = 15;
-						gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].idRegistro = indiceTienda;
+						gestionObjetos->mejoraRango[gestionObjetos->mejoraRangoActual].idRegistro = registroMundo->indiceTienda;
 						gestionObjetos->mejoraRangoActual++;
 
-						registroTienda[indiceTienda].columna = j;
-						registroTienda[indiceTienda].fila = i;
-						registroTienda[indiceTienda].mapaX = estadoMapa->actualMapaX;
-						registroTienda[indiceTienda].mapaY = estadoMapa->actualMapaY;
-						registroTienda[indiceTienda].idObjeto = 2;
-						registroTienda[indiceTienda].comprado = 0;
-						indiceTienda++;
+						registroMundo->registroTienda[registroMundo->indiceTienda].columna = j;
+						registroMundo->registroTienda[registroMundo->indiceTienda].fila = i;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroTienda[registroMundo->indiceTienda].idObjeto = 2;
+						registroMundo->registroTienda[registroMundo->indiceTienda].comprado = 0;
+						registroMundo->indiceTienda++;
 					}
 					else if (auxRandTienda == 3)
 					{
@@ -1254,16 +1246,16 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].posY = i * TAMANHO - 30;
 						gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].seVende = 1;
 						gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].precio = 10;
-						gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].idRegistro = indiceTienda;
+						gestionObjetos->mejoraVelocidad[gestionObjetos->mejoraVelocidadActual].idRegistro = registroMundo->indiceTienda;
 						gestionObjetos->mejoraVelocidadActual++;
 
-						registroTienda[indiceTienda].columna = j;
-						registroTienda[indiceTienda].fila = i;
-						registroTienda[indiceTienda].mapaX = estadoMapa->actualMapaX;
-						registroTienda[indiceTienda].mapaY = estadoMapa->actualMapaY;
-						registroTienda[indiceTienda].idObjeto = 3;
-						registroTienda[indiceTienda].comprado = 0;
-						indiceTienda++;
+						registroMundo->registroTienda[registroMundo->indiceTienda].columna = j;
+						registroMundo->registroTienda[registroMundo->indiceTienda].fila = i;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroTienda[registroMundo->indiceTienda].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroTienda[registroMundo->indiceTienda].idObjeto = 3;
+						registroMundo->registroTienda[registroMundo->indiceTienda].comprado = 0;
+						registroMundo->indiceTienda++;
 					}
 				}
 			}
@@ -1279,7 +1271,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 				for (int k = 0; k < MAX_REGISTROS; k++)
 				{
-					if (registroInteractuables[k].mapaX == estadoMapa->actualMapaX && registroInteractuables[k].mapaY == estadoMapa->actualMapaY && registroInteractuables[k].fogataEncendida == 1 && registroInteractuables[k].fila == i && registroInteractuables[k].columna == j)
+					if (registroMundo->registroInteractuables[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroInteractuables[k].mapaY == estadoMapa->actualMapaY && registroMundo->registroInteractuables[k].fogataEncendida == 1 && registroMundo->registroInteractuables[k].fila == i && registroMundo->registroInteractuables[k].columna == j)
 					{
 						fogataEncendida = 1;
 						break;
@@ -1353,7 +1345,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 				for (int k = 0; k < MAX_REGISTROS; k++)
 				{
-					if (registroRecompensas[k].mapaX == estadoMapa->actualMapaX && registroRecompensas[k].mapaY == mapaY && registroRecompensas[k].fila == i && registroRecompensas[k].columna == j && registroRecompensas[k].seObtuvoUnCargador == 1)
+					if (registroMundo->registroRecompensas[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroRecompensas[k].mapaY == mapaY && registroMundo->registroRecompensas[k].fila == i && registroMundo->registroRecompensas[k].columna == j && registroMundo->registroRecompensas[k].seObtuvoUnCargador == 1)
 					{
 						cargadorObtenido = 1;
 						break;
@@ -1377,7 +1369,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 				for (int k = 0; k < MAX_REGISTROS; k++)
 				{
-					if (registroInteractuables[k].mapaX == estadoMapa->actualMapaX && registroInteractuables[k].mapaY == mapaY && registroInteractuables[k].fila == i && registroInteractuables[k].columna == j && registroInteractuables[k].dianaDestruida == 1)
+					if (registroMundo->registroInteractuables[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroInteractuables[k].mapaY == mapaY && registroMundo->registroInteractuables[k].fila == i && registroMundo->registroInteractuables[k].columna == j && registroMundo->registroInteractuables[k].dianaDestruida == 1)
 					{
 						dianaDestruida = 1;
 					}
@@ -1408,7 +1400,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 				{
 					cofreAbierto = 0;
 
-					if (registroRecompensas[i].mapaX == mapaX && registroRecompensas[i].mapaY == mapaY && registroRecompensas[i].seAbrioUnCofre != 0)
+					if (registroMundo->registroRecompensas[i].mapaX == mapaX && registroMundo->registroRecompensas[i].mapaY == mapaY && registroMundo->registroRecompensas[i].seAbrioUnCofre != 0)
 					{
 						cofreAbierto = 1;
 						break;
@@ -1440,7 +1432,7 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 
 					for (int i = 0; i < 1000; i++)
 					{
-						if (registroRecompensas[i].mapaX == mapaX && registroRecompensas[i].mapaY == mapaY && registroRecompensas[i].seObtuvoUnaRecompensa != estadoMapa->seGeneroUnaRecompensa)
+						if (registroMundo->registroRecompensas[i].mapaX == mapaX && registroMundo->registroRecompensas[i].mapaY == mapaY && registroMundo->registroRecompensas[i].seObtuvoUnaRecompensa != estadoMapa->seGeneroUnaRecompensa)
 						{
 							estadoMapa->seGeneroUnaRecompensa ++;
 						}
@@ -1478,11 +1470,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//ubicar posicion enemigo
 			if (mapa[i][j]=='s')
 			{
-				for (int m = 0; m < cantidadMuertos; m++)
+				for (int m = 0; m < registroMundo->cantidadMuertos; m++)
 				{
 					muerto = 0;
 
-					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					if (registroMundo->registroMuertes[m].mapaX == mapaX && registroMundo->registroMuertes[m].mapaY == mapaY && registroMundo->registroMuertes[m].fila == i && registroMundo->registroMuertes[m].columna == j)
 					{
 						muerto = 1;
 						break;
@@ -1517,11 +1509,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			if (estadoMapa->sala[i][j] == 'j')
 			{
 
-				for (int n = 0; n < cantidadMuertos; n++)
+				for (int n = 0; n < registroMundo->cantidadMuertos; n++)
 				{
 					muerto = 0;
 
-					if (registroMuertes[n].mapaX == mapaX && registroMuertes[n].mapaY == mapaY && registroMuertes[n].fila == i && registroMuertes[n].columna == j)
+					if (registroMundo->registroMuertes[n].mapaX == mapaX && registroMundo->registroMuertes[n].mapaY == mapaY && registroMundo->registroMuertes[n].fila == i && registroMundo->registroMuertes[n].columna == j)
 					{
 						muerto = 1;
 						break;
@@ -1546,11 +1538,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//cargar magos
 			if (mapa[i][j]=='m')
 			{
-				for (int m = 0; m < cantidadMuertos; m++)
+				for (int m = 0; m < registroMundo->cantidadMuertos; m++)
 				{
 					muerto = 0;
 
-					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					if (registroMundo->registroMuertes[m].mapaX == mapaX && registroMundo->registroMuertes[m].mapaY == mapaY && registroMundo->registroMuertes[m].fila == i && registroMundo->registroMuertes[m].columna == j)
 					{
 						muerto = 1;
 						break;
@@ -1584,11 +1576,11 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			//cargar Arañas 
 			if (mapa[i][j]=='A')
 			{
-				for (int m = 0; m < cantidadMuertos; m++)
+				for (int m = 0; m < registroMundo->cantidadMuertos; m++)
 				{
 					muerto = 0;
 
-					if (registroMuertes[m].mapaX == mapaX && registroMuertes[m].mapaY == mapaY && registroMuertes[m].fila == i && registroMuertes[m].columna == j)
+					if (registroMundo->registroMuertes[m].mapaX == mapaX && registroMundo->registroMuertes[m].mapaY == mapaY && registroMundo->registroMuertes[m].fila == i && registroMundo->registroMuertes[m].columna == j)
 					{
 						muerto = 1;
 						break;
@@ -2046,7 +2038,7 @@ void InitAllegro()
 	al_init_ttf_addon();
 }
 
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
@@ -2157,7 +2149,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		personaje.bala[i].posY = 0;
 		personaje.bala[i].velocidad = 10;		
 		personaje.bala[i].activa = 0;
-		personaje.bala[i].danho = 1;              
+		personaje.bala[i].danho = 10; //////// 1              
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 		personaje.bala[i].seDisparo = 0;
@@ -2232,7 +2224,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	//Inicializar mapa
 	for (int i = 0; i < FILAS_MAPA; i++)
 	{
-		for (int j = 0; i < COLUMNAS_MAPA; i++)
+		for (int j = 0; j < COLUMNAS_MAPA; j++)
 		{
 			estadoMapa->mapa[i][j] = NULL;
 		}
@@ -2263,26 +2255,38 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	}
 
 	//Inicializacion registros
+	registroMundo->indiceTienda = 0;
+	registroMundo->cantidadInteractuables = 0;
+	registroMundo->cantidadRecompensas = 0;
+	registroMundo->cantidadMuertos = 0;
+
 	for (int i = 0; i < MAX_REGISTROS; i++)
 	{
-		registroMuertes[i].columna = 0;
-		registroMuertes[i].fila = 0;
-		registroMuertes[i].mapaX = 0;
-		registroMuertes[i].mapaY = 0;
-		
-		registroInteractuables[i].columna = 0;
-		registroInteractuables[i].fila = 0;
-		registroInteractuables[i].fogataEncendida = 0;
-		registroInteractuables[i].mapaX = 0;
-		registroInteractuables[i].mapaY = 0;
+		registroMundo->registroTienda[i].comprado = 0;
+		registroMundo->registroTienda[i].idObjeto = 0;
+		registroMundo->registroTienda[i].columna = 0;
+		registroMundo->registroTienda[i].fila = 0;
+		registroMundo->registroTienda[i].mapaX = 0;
+		registroMundo->registroTienda[i].mapaY = 0;
 
-		registroRecompensas[i].columna = 0;
-		registroRecompensas[i].fila = 0;
-		registroRecompensas[i].mapaX = 0;
-		registroRecompensas[i].mapaY = 0;
-		registroRecompensas[i].seAbrioUnCofre = 0;
-		registroRecompensas[i].seObtuvoUnaRecompensa = 0;
-		registroRecompensas[i].seObtuvoUnCargador = 0;
+		registroMundo->registroMuertes[i].columna = 0;
+		registroMundo->registroMuertes[i].fila = 0;
+		registroMundo->registroMuertes[i].mapaX = 0;
+		registroMundo->registroMuertes[i].mapaY = 0;
+		
+		registroMundo->registroInteractuables[i].columna = 0;
+		registroMundo->registroInteractuables[i].fila = 0;
+		registroMundo->registroInteractuables[i].fogataEncendida = 0;
+		registroMundo->registroInteractuables[i].mapaX = 0;
+		registroMundo->registroInteractuables[i].mapaY = 0;
+
+		registroMundo->registroRecompensas[i].columna = 0;
+		registroMundo->registroRecompensas[i].fila = 0;
+		registroMundo->registroRecompensas[i].mapaX = 0;
+		registroMundo->registroRecompensas[i].mapaY = 0;
+		registroMundo->registroRecompensas[i].seAbrioUnCofre = 0;
+		registroMundo->registroRecompensas[i].seObtuvoUnaRecompensa = 0;
+		registroMundo->registroRecompensas[i].seObtuvoUnCargador = 0;
 	}
 }
 
@@ -2661,7 +2665,7 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, gestionEnemigos_ *gestionEne
 	}
 }
 
-void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
 {
 	//Colicion gestionEnemigos->slime y pared
 	int auxXSlime = 0;
@@ -2669,7 +2673,7 @@ void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionO
 	int auxXAranha = 0;
 	int auxYAranha = 0;
 
-	ColisionEnemigos(gestionEnemigos, gestionObjetos, estadoMapa);
+	ColisionEnemigos(gestionEnemigos, gestionObjetos, estadoMapa, registroMundo);
 
 	DisparoEnemigos(gestionEnemigos, estadoMapa);
 
@@ -2805,9 +2809,9 @@ void LogicaJefe(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 	int auxXJefe = 0;
 	int auxYJefe = 0;
 
-	timerMovimientoJefe ++;
+	gestionEnemigos->jefe.timerMovimientoJefe++;
 
-	if (gestionEnemigos->jefe.activa != 0 && timerMovimientoJefe < 60)
+	if (gestionEnemigos->jefe.activa != 0 && gestionEnemigos->jefe.timerMovimientoJefe < 60)
 	{
 		auxXJefe = gestionEnemigos->jefe.posX;
 		auxYJefe = gestionEnemigos->jefe.posY;
@@ -2851,14 +2855,14 @@ void LogicaJefe(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa)
 		}
 	}
 
-	if (timerMovimientoJefe >= 120)
+	if (gestionEnemigos->jefe.timerMovimientoJefe >= 120)
 	{
-		timerMovimientoJefe = 0;
+		gestionEnemigos->jefe.timerMovimientoJefe = 0;
 	}
 	
 }
 
-void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
 {
 	/////////////////////////////////////////////////////////////////////// Colisiones arañas y jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
@@ -2888,20 +2892,20 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 						gestionObjetos->monedasActual ++;
 
 
-						if (cantidadMuertos < 1000)
+						if (registroMundo->cantidadMuertos < 1000)
 						{
 							//Cuando muere un gestionEnemigos->aranha se registra el mapa donde murio en una posicion del arreglo
-							strcpy(registroMuertes[cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
+							strcpy(registroMundo->registroMuertes[registroMundo->cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
 
 							//Se registra su lugar de aparicion original
-							registroMuertes[cantidadMuertos].fila = gestionEnemigos->aranha[i].posYGeneracion;
-							registroMuertes[cantidadMuertos].columna = gestionEnemigos->aranha[i].posXGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].fila = gestionEnemigos->aranha[i].posYGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].columna = gestionEnemigos->aranha[i].posXGeneracion;
 
 							//Registramos la parte del mapa donde murieron
-							registroMuertes[cantidadMuertos].mapaX = estadoMapa->actualMapaX;
-							registroMuertes[cantidadMuertos].mapaY = estadoMapa->actualMapaY;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaX = estadoMapa->actualMapaX;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaY = estadoMapa->actualMapaY;
 
-							cantidadMuertos ++;
+							registroMundo->cantidadMuertos ++;
 						}
 					}
 				}
@@ -2945,20 +2949,20 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 						gestionObjetos->monedasActual ++;
 
 
-						if (cantidadMuertos < 1000)
+						if (registroMundo->cantidadMuertos < 1000)
 						{
 							//Cuando muere un gestionEnemigos->slime se registra el mapa donde murio en una posicion del arreglo
-							strcpy(registroMuertes[cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
+							strcpy(registroMundo->registroMuertes[registroMundo->cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
 
 							//Se registra su lugar de aparicion original
-							registroMuertes[cantidadMuertos].fila = gestionEnemigos->slime[i].posYGeneracion;
-							registroMuertes[cantidadMuertos].columna = gestionEnemigos->slime[i].posXGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].fila = gestionEnemigos->slime[i].posYGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].columna = gestionEnemigos->slime[i].posXGeneracion;
 
 							//Registramos la parte del mapa donde murieron
-							registroMuertes[cantidadMuertos].mapaX = estadoMapa->actualMapaX;
-							registroMuertes[cantidadMuertos].mapaY = estadoMapa->actualMapaY;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaX = estadoMapa->actualMapaX;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaY = estadoMapa->actualMapaY;
 
-							cantidadMuertos ++;
+							registroMundo->cantidadMuertos ++;
 						}
 					}
 				}
@@ -3078,20 +3082,20 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 						gestionObjetos->monedas[gestionObjetos->monedasActual].activa = 1;
 						gestionObjetos->monedasActual ++;
 
-						if (cantidadMuertos < 1000)
+						if (registroMundo->cantidadMuertos < 1000)
 						{
 							//Cuando muere un gestionEnemigos->slime se registra el mapa donde murio en una posicion del arreglo
-							strcpy(registroMuertes[cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
+							strcpy(registroMundo->registroMuertes[registroMundo->cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
 
 							//Se registra su lugar de aparicion original
-							registroMuertes[cantidadMuertos].fila = gestionEnemigos->mago[i].posYGeneracion;
-							registroMuertes[cantidadMuertos].columna = gestionEnemigos->mago[i].posXGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].fila = gestionEnemigos->mago[i].posYGeneracion;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].columna = gestionEnemigos->mago[i].posXGeneracion;
 
 							//Registramos la parte del mapa donde murieron
-							registroMuertes[cantidadMuertos].mapaX = estadoMapa->actualMapaX;
-							registroMuertes[cantidadMuertos].mapaY = estadoMapa->actualMapaY;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaX = estadoMapa->actualMapaX;
+							registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaY = estadoMapa->actualMapaY;
 
-							cantidadMuertos ++;
+							registroMundo->cantidadMuertos ++;
 						}
 					}
 				}
@@ -3146,20 +3150,20 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 					gestionObjetos->mapaRojo.posX = gestionEnemigos->jefe.posX;
 					gestionObjetos->mapaRojo.posY = gestionEnemigos->jefe.posY;
 
-					if (cantidadMuertos < 1000)
+					if (registroMundo->cantidadMuertos < 1000)
 					{
 						//Cuando muere un gestionEnemigos->slime se registra el mapa donde murio en una posicion del arreglo
-						strcpy(registroMuertes[cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
+						strcpy(registroMundo->registroMuertes[registroMundo->cantidadMuertos].registroMapa, estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX]);
 
 						//Se registra su lugar de aparicion original
-						registroMuertes[cantidadMuertos].fila = gestionEnemigos->jefe.posYGeneracion;
-						registroMuertes[cantidadMuertos].columna = gestionEnemigos->jefe.posXGeneracion;
+						registroMundo->registroMuertes[registroMundo->cantidadMuertos].fila = gestionEnemigos->jefe.posYGeneracion;
+						registroMundo->registroMuertes[registroMundo->cantidadMuertos].columna = gestionEnemigos->jefe.posXGeneracion;
 
 						//Registramos la parte del mapa donde murieron
-						registroMuertes[cantidadMuertos].mapaX = estadoMapa->actualMapaX;
-						registroMuertes[cantidadMuertos].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroMuertes[registroMundo->cantidadMuertos].mapaY = estadoMapa->actualMapaY;
 
-						cantidadMuertos ++;
+						registroMundo->cantidadMuertos ++;
 					}
 				}
 			}
@@ -3181,7 +3185,7 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 	}
 }
 
-void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
 {
 	int auxRand = 0;
 
@@ -3271,12 +3275,12 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 				gestionObjetos->municiones[i].activa = 0;
 
 				//Se registra que el cargador recogido
-				registroRecompensas[cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
-				registroRecompensas[cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
-				registroRecompensas[cantidadRecompensas].fila = gestionObjetos->municiones[i].fila;
-				registroRecompensas[cantidadRecompensas].columna = gestionObjetos->municiones[i].columna;
-				registroRecompensas[cantidadRecompensas].seObtuvoUnCargador = 1;
-				cantidadRecompensas;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].fila = gestionObjetos->municiones[i].fila;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].columna = gestionObjetos->municiones[i].columna;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seObtuvoUnCargador = 1;
+				registroMundo->cantidadRecompensas;
 			}
 		}
 
@@ -3316,13 +3320,13 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 				personaje.cantidadMonedas -= gestionObjetos->mejoraDanho[i].precio;
 				
 				//Comprobar ubicacion de la mejora
-				registroTienda[gestionObjetos->mejoraDanho[i].idRegistro].comprado = 1;
+				registroMundo->registroTienda[gestionObjetos->mejoraDanho[i].idRegistro].comprado = 1;
 
-				for (int k = 0; k < indiceTienda; k++)
+				for (int k = 0; k < registroMundo->indiceTienda; k++)
 				{
-					if (registroTienda[k].columna == gestionObjetos->mejoraDanho[i].columna && registroTienda[k].fila == gestionObjetos->mejoraDanho[i].fila && registroTienda[k].mapaX == estadoMapa->actualMapaX && registroTienda[k].mapaY == estadoMapa->actualMapaY)
+					if (registroMundo->registroTienda[k].columna == gestionObjetos->mejoraDanho[i].columna && registroMundo->registroTienda[k].fila == gestionObjetos->mejoraDanho[i].fila && registroMundo->registroTienda[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroTienda[k].mapaY == estadoMapa->actualMapaY)
 					{
-						registroTienda[k].comprado = 1; 
+						registroMundo->registroTienda[k].comprado = 1; 
 						break; 
 					}
 				}
@@ -3347,13 +3351,13 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 				personaje.cantidadMonedas -= gestionObjetos->mejoraRango[i].precio;
 				
 				//Comprobar ubicacion de la mejora
-				registroTienda[gestionObjetos->mejoraRango[i].idRegistro].comprado = 1;
+				registroMundo->registroTienda[gestionObjetos->mejoraRango[i].idRegistro].comprado = 1;
 
-				for (int k = 0; k < indiceTienda; k++)
+				for (int k = 0; k < registroMundo->indiceTienda; k++)
 				{
-					if (registroTienda[k].columna == gestionObjetos->mejoraRango[i].columna && registroTienda[k].fila == gestionObjetos->mejoraRango[i].fila && registroTienda[k].mapaX == estadoMapa->actualMapaX && registroTienda[k].mapaY == estadoMapa->actualMapaY)
+					if (registroMundo->registroTienda[k].columna == gestionObjetos->mejoraRango[i].columna && registroMundo->registroTienda[k].fila == gestionObjetos->mejoraRango[i].fila && registroMundo->registroTienda[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroTienda[k].mapaY == estadoMapa->actualMapaY)
 					{
-						registroTienda[k].comprado = 1; 
+						registroMundo->registroTienda[k].comprado = 1; 
 						break; 
 					}
 				}
@@ -3378,13 +3382,13 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 				personaje.cantidadMonedas -= gestionObjetos->mejoraVelocidad[i].precio;
 				
 				//Comprobar ubicacion de la mejora
-				registroTienda[gestionObjetos->mejoraVelocidad[i].idRegistro].comprado = 1;
+				registroMundo->registroTienda[gestionObjetos->mejoraVelocidad[i].idRegistro].comprado = 1;
 
-				for (int k = 0; k < indiceTienda; k++)
+				for (int k = 0; k < registroMundo->indiceTienda; k++)
 				{
-					if (registroTienda[k].columna == gestionObjetos->mejoraVelocidad[i].columna && registroTienda[k].fila == gestionObjetos->mejoraVelocidad[i].fila && registroTienda[k].mapaX == estadoMapa->actualMapaX && registroTienda[k].mapaY == estadoMapa->actualMapaY)
+					if (registroMundo->registroTienda[k].columna == gestionObjetos->mejoraVelocidad[i].columna && registroMundo->registroTienda[k].fila == gestionObjetos->mejoraVelocidad[i].fila && registroMundo->registroTienda[k].mapaX == estadoMapa->actualMapaX && registroMundo->registroTienda[k].mapaY == estadoMapa->actualMapaY)
 					{
-						registroTienda[k].comprado = 1; 
+						registroMundo->registroTienda[k].comprado = 1; 
 						break; 
 					}
 				}
@@ -3398,10 +3402,10 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 			{
 				gestionObjetos->cofres[i].cofreAbierto = 1;
 				personaje.cantidadLlaves--;
-				registroRecompensas[cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
-				registroRecompensas[cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
-				registroRecompensas[cantidadRecompensas].seAbrioUnCofre = 1;
-				cantidadRecompensas++;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seAbrioUnCofre = 1;
+				registroMundo->cantidadRecompensas++;
 
 				//Siempre dará de recompensa una recarga
 				gestionObjetos->municiones[gestionObjetos->municionesActual].activa = 1;
@@ -3471,7 +3475,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
 	}
 }
 
-void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
+void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
 {
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
 	{
@@ -3482,12 +3486,12 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDian
 				gestionInteractuables->fogata[i].fogataActiva = 1;
 				gestionInteractuables->cantidadfogatasActivas++;
 
-				registroInteractuables[cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
-				registroInteractuables[cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
-				registroInteractuables[cantidadInteractuables].fila = gestionInteractuables->fogata[i].fila;
-				registroInteractuables[cantidadInteractuables].columna = gestionInteractuables->fogata[i].columna;
-				registroInteractuables[cantidadInteractuables].fogataEncendida = 1;
-				cantidadInteractuables++;
+				registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
+				registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
+				registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].fila = gestionInteractuables->fogata[i].fila;
+				registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].columna = gestionInteractuables->fogata[i].columna;
+				registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].fogataEncendida = 1;
+				registroMundo->cantidadInteractuables++;
 
 				break;
 			}
@@ -3508,12 +3512,12 @@ void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDian
 						gestionDianas->dianas[i].activa = 0;
 						gestionDianas->dianas[i].destruida = 1;
 
-						registroInteractuables[cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
-						registroInteractuables[cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
-						registroInteractuables[cantidadInteractuables].fila = gestionDianas->dianas[i].fila;
-						registroInteractuables[cantidadInteractuables].columna = gestionDianas->dianas[i].columna;
-						registroInteractuables[cantidadInteractuables].dianaDestruida = 1;
-						cantidadInteractuables++;
+						registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].fila = gestionDianas->dianas[i].fila;
+						registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].columna = gestionDianas->dianas[i].columna;
+						registroMundo->registroInteractuables[registroMundo->cantidadInteractuables].dianaDestruida = 1;
+						registroMundo->cantidadInteractuables++;
 					}
 				}
 			}
@@ -3581,16 +3585,16 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas)
 	}
 }
 
-void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa)
+void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
 {
 	if (estadoMapa->salaVacia == 1 && estadoMapa->seGeneroUnaRecompensa == 0 && !(estadoMapa->actualMapaX == COLUMNAS_MAPA / 2 + 1 && estadoMapa->actualMapaY == FILAS_MAPA / 2 + 1))
 	{
 		estadoMapa->seGeneroUnaRecompensa = 1;
 
-		registroRecompensas[cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
-		registroRecompensas[cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
-		registroRecompensas[cantidadRecompensas].seObtuvoUnaRecompensa = 1;
-		cantidadRecompensas ++;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seObtuvoUnaRecompensa = 1;
+		registroMundo->cantidadRecompensas ++;
 		//Hacer un pull de objetos aleatorios, por ahora la llave
 		
 		gestionObjetos->llaves[gestionObjetos->llavesActual].activa = 1;
@@ -3627,7 +3631,7 @@ void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMa
 	//printf("estadoMapa->sala vacia = %d", estadoMapa->salaVacia);
 }
 
-void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables)
+void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
 {
 	FILE *archivoHabitacion = NULL;
 	
@@ -3636,7 +3640,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] != NULL)
 		{
 			estadoMapa->actualMapaX --;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'E', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'E', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 		}
 
 		personaje.traspasoPuerta = 0;
@@ -3660,7 +3664,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] != NULL)
 		{
 			estadoMapa->actualMapaX ++;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'O', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'O', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3684,7 +3688,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY + 1][estadoMapa->actualMapaX] != NULL)
 		{
 			estadoMapa->actualMapaY ++;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'N', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'N', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 		}
 		
 		personaje.traspasoPuerta = 0;
@@ -3708,7 +3712,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		if (estadoMapa->mapa[estadoMapa->actualMapaY - 1][estadoMapa->actualMapaX] != NULL)
 		{
 			estadoMapa->actualMapaY --;
-			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'S', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+			cargarMapa(estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX], archivoHabitacion, estadoMapa->sala, &personaje, gestionEnemigos, 'S', estadoMapa->actualMapaX, estadoMapa->actualMapaY, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables, registroMundo);
 		}
 		
 		personaje.traspasoPuerta = 0;
