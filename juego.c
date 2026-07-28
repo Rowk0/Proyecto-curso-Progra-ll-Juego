@@ -32,18 +32,23 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Mejorar diseño mapas (habitacion dianas y cofres)
+//Mejorar diseño mapas diana
 
-//Al disparar una diana, salir, volver y disparar todas, no sale el mapa
+//Boton ranking en pantalla reiniciar, boton volver menu, y boton reiniciar donde inicias inmediatamente el juego
 
 //retencion de objetos como la moneda, llaves, y objetos del cofre
 
-//implementar mas "armas" al jugador
+//Mejorar diseño mapa cofre y fogata
+
+//animacion de entrada (Breve), indicar objetivos (lore breve)
+
+//Buscar funciones largas y simplificarlas, dividir en más funciones
 
 //ideas:
 //minimapa
 //trampas
 //Enemigo que te persiga y dispare tres balas
+//implementar mas "armas" al jugador
 
 //Ultimo:
 //Joystick
@@ -808,7 +813,7 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 
 		if (controlMenu->mouseEnPlay == 1)
 		{
-			al_draw_text(fuenteJuego, al_map_rgb(220, 220, 220), 850, 550, 0, "Jugar");
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 850, 550, 0, "Jugar");
 		}
 		else
 		{
@@ -820,14 +825,13 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 
 		if (controlMenu->mouseEnRanking == 1)
 		{
-			al_draw_text(fuenteJuego, al_map_rgb(220, 220, 220), 830, 650, 0, "Ranking");
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 830, 650, 0, "Ranking");
 		}
 		else
 		{
 			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 830, 650, 0, "Ranking");
 		}
 		
-
 		////////////////////////////////////////////////
 		al_flip_display();
 	}
@@ -864,13 +868,12 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 	
 		if (controlMenu->mouseEnVolver == 1)
 		{
-			al_draw_text(fuenteJuego, al_map_rgb(220, 220, 220), 100, 950, 0, "volver");
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 100, 950, 0, "volver");
 		}
 		else 
 		{
 			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 950, 0, "volver");
 		}
-		
 		
 		////////////////////////////////////////////////
 		al_flip_display();	
@@ -945,9 +948,9 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	//Verificar evento de gestionDianas->dianas
 	gestionDianas->cantidadDianasDestruidas = 0;
 
-	for (int i = 0; i < MAX_DIANAS; i++)
+	for (int i = 0; i < MAX_REGISTROS; i++)
 	{
-		if (gestionDianas->dianas[i].destruida != 0)
+		if (registroMundo->registroInteractuables[i].dianaDestruida != 0)
 		{
 			gestionDianas->cantidadDianasDestruidas++;
 
@@ -960,7 +963,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 			}
 		}
 	}
-
+	
 	//Verificar el evento de fogatas
 	if (gestionInteractuables->cantidadfogatasActivas >= 4)
 	{
@@ -2320,7 +2323,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	estadoMapa->seGeneroUnaRecompensa = 0;
 
 	//Inicializando jugador
-	personaje.velocidad = 7; ////////// 7
+	personaje.velocidad = 16; ////////// 7
 	personaje.animacionJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
@@ -3826,6 +3829,34 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, contro
 
 	for (int i = 0; i < MAX_DIANAS; i++)
 	{
+		if (gestionDianas->dianas[i].activa != 0)
+		{
+			auxXDiana = gestionDianas->dianas[i].posX;
+			auxYDiana = gestionDianas->dianas[i].posY;
+
+			if (gestionDianas->dianas[i].chocoConPared % 2 == 0)
+			{
+				gestionDianas->dianas[i].posX += gestionDianas->dianas[i].velocidad;
+			} 
+			else if (gestionDianas->dianas[i].chocoConPared % 2 != 0)
+			{
+				gestionDianas->dianas[i].posX -= gestionDianas->dianas[i].velocidad;
+			}
+		}
+
+		if (ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY) || 
+			ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY) || 
+			ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY + TAMANHO - 1) ||
+			ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY + TAMANHO - 1))
+		{
+			gestionDianas->dianas[i].posX = auxXDiana;
+			gestionDianas->dianas[i].chocoConPared++;
+		}
+	}
+	
+
+	/*for (int i = 0; i < MAX_DIANAS; i++)
+	{
 		auxXDiana = gestionDianas->dianas[i].posX;
 		auxYDiana = gestionDianas->dianas[i].posY;
 
@@ -3836,11 +3867,11 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, contro
 		
 		if (gestionDianas->dianas[i].auxRanDianas == 1 && gestionDianas->dianas[i].activa != 0)
 		{
-			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 == 0)
+			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 == 0)
 			{
 				gestionDianas->dianas[i].posX += gestionDianas->dianas[i].velocidad;
 			} 
-			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 != 0)
+			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 != 0)
 			{
 				gestionDianas->dianas[i].posX -= gestionDianas->dianas[i].velocidad;
 			}
@@ -3852,17 +3883,16 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, contro
 			{
 				gestionDianas->dianas[i].posX = auxXDiana;
 				gestionDianas->dianas[i].chocoConPared++;
-				Sonido(controlAudio, 8);
 			}
 		}
 		
 		if (gestionDianas->dianas[i].auxRanDianas == 2 && gestionDianas->dianas[i].activa != 0)
 		{
-			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 == 0)
+			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 == 0)
 			{
 				gestionDianas->dianas[i].posY += gestionDianas->dianas[i].velocidad;
 			} 
-			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared%2 != 0)
+			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 != 0)
 			{
 				gestionDianas->dianas[i].posY -= gestionDianas->dianas[i].velocidad;
 			}
@@ -3874,10 +3904,9 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, contro
 			{
 				gestionDianas->dianas[i].posY = auxYDiana;
 				gestionDianas->dianas[i].chocoConPared++;
-				Sonido(controlAudio, 8);
 			}
 		}
-	}
+	}*/
 }
 
 void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
@@ -4080,6 +4109,7 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 	while (a < cantidadHabitacionesDeseadas)
 	{
 		auxRand = rand() % 9 + 1;
+		auxRand = 7;
 
 		if (auxRand == 1)
 		{
