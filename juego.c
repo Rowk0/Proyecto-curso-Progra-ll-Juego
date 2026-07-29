@@ -32,23 +32,20 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//retencion de objetos como la moneda, llaves, y objetos del cofre
+//minimapa recogible
 
-//Mejorar diseño mapa cofre y fogata
-
-//Buscar funciones largas y simplificarlas, dividir en más funciones
+//Limite en el ranking, y ordenar el puntaje de mayor a menor
 
 //animacion de entrada (Breve), indicar objetivos (lore breve)
 
+//retencion de objetos como la moneda y objetos del cofre
+
+//Mejorar diseño mapa cofre y fogata
+
 //ideas:
-//minimapa
 //trampas
 //Enemigo que te persiga y dispare tres balas
 //implementar mas "armas" al jugador
-
-//Ultimo:
-//Joystick
-//Dos jugadores
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -186,6 +183,12 @@ typedef struct
 	int seObtuvoUnaRecompensa;
 	int seAbrioUnCofre;
 	int seObtuvoUnCargador;
+
+	//apartado para objetos que no aparecen en el mapa
+	int posX;
+	int posY;
+	char idItem;
+	int seRecogioElItem;
 } registroRecompensas_;
 
 typedef struct 
@@ -221,6 +224,7 @@ typedef struct
 	int seVende;
 	int precio;
 	int idRegistro;
+	int seGenero;
 } objeto;
 
 typedef struct 
@@ -406,6 +410,7 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 void Musica(controlAudio_ *controlAudio, char *nombreMusica);
 void Sonido(controlAudio_ *controlAudio, int indiceSonido);
 void ColisionMapaBalas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION]);
+void VerificarEventoDeSalas(gestionDianas_ *gestionDianas, registroMundo_ *registroMundo, gestionObjetos_ *gestionObjetos);
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
@@ -555,6 +560,33 @@ int main(int argc, char **argv)
 	al_uninstall_audio();
 
 	return 0;
+}
+
+//borrar
+void VerificarEventoDeSalas(gestionDianas_ *gestionDianas, registroMundo_ *registroMundo, gestionObjetos_ *gestionObjetos)
+{
+	//Verificar dianas
+	gestionDianas->cantidadDianasDestruidas = 0;
+
+	for (int i = 0; i < MAX_REGISTROS; i++)
+	{
+		if (registroMundo->registroInteractuables[i].dianaDestruida != 0)
+		{
+			gestionDianas->cantidadDianasDestruidas++;
+
+			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.seObtuvo == 0)
+			{
+				gestionObjetos->mapaVerde.activa = 1;
+				gestionObjetos->mapaVerde.posX = 8 * TAMANHO;
+				gestionObjetos->mapaVerde.posY = 3 * TAMANHO;
+
+				/*registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posX = gestionObjetos->mapaVerde.posX;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posY = gestionObjetos->mapaVerde.posY;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].idItem = 'v';
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seRecogioElItem = 0;*/
+			}
+		}
+	}
 }
 
 void Sonido(controlAudio_ *controlAudio, int indiceSonido)
@@ -1087,7 +1119,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
 
-	//Verificar evento de gestionDianas->dianas
+	//Verificar dianas
 	gestionDianas->cantidadDianasDestruidas = 0;
 
 	for (int i = 0; i < MAX_REGISTROS; i++)
@@ -1096,12 +1128,20 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		{
 			gestionDianas->cantidadDianasDestruidas++;
 
-			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.especial == 0)
+			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.seGenero == 0)
 			{
 				gestionObjetos->mapaVerde.activa = 1;
 				gestionObjetos->mapaVerde.posX = 8 * TAMANHO;
 				gestionObjetos->mapaVerde.posY = 3 * TAMANHO;
-				gestionObjetos->mapaVerde.especial = 1;
+				gestionObjetos->mapaVerde.seGenero = 1;
+
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posX = gestionObjetos->mapaVerde.posX;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posY = gestionObjetos->mapaVerde.posY;
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].idItem = 'v';
+				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seRecogioElItem = 0;
+				registroMundo->cantidadRecompensas++;
 			}
 		}
 	}
@@ -1507,6 +1547,24 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 	} 
 
 	DesactivarObjetosActivos(gestionEnemigos, controlIndices, gestionObjetos, estadoMapa, gestionDianas, gestionInteractuables);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < MAX_REGISTROS; i++)
+	{
+		//Aparicion del mapa verde si no se recoge
+		if (registroMundo->registroRecompensas[i].mapaX == estadoMapa->actualMapaX && registroMundo->registroRecompensas[i].mapaY == estadoMapa->actualMapaY && registroMundo->registroRecompensas[i].idItem == 'v' && registroMundo->registroRecompensas[i].seRecogioElItem == 0)
+		{
+			gestionObjetos->mapaVerde.activa = 1;
+			gestionObjetos->mapaVerde.posX = registroMundo->registroRecompensas[i].posX;
+			gestionObjetos->mapaVerde.posY = registroMundo->registroRecompensas[i].posY;
+		}
+
+		if (registroMundo->registroRecompensas[i].mapaX == estadoMapa->actualMapaX && registroMundo->registroRecompensas[i].mapaY == estadoMapa->actualMapaY && registroMundo->registroRecompensas[i].idItem == 'l' && registroMundo->registroRecompensas[i].seRecogioElItem == 0)
+		{
+			gestionObjetos->llaves[gestionObjetos->llavesActual].activa = 1;
+		}
+	}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2502,7 +2560,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	personaje.vidas = 6;
 	personaje.invulnerable = 0;
 	personaje.cantidadMonedas = 10; ///////// 0
-	personaje.cantidadLlaves = 0; //////////////// originalmente 0
+	personaje.cantidadLlaves = 1; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
 	personaje.balasrestantes = MAX_BALAS;
 	personaje.puntaje = 0;
@@ -3321,8 +3379,16 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 						gestionObjetos->monedas[gestionObjetos->monedasActual].posX = gestionEnemigos->aranha[i].posX;
 						gestionObjetos->monedas[gestionObjetos->monedasActual].posY = gestionEnemigos->aranha[i].posY;
 						gestionObjetos->monedas[gestionObjetos->monedasActual].activa = 1;
-						gestionObjetos->monedasActual ++;
+						
+						/*registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
+						registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+						registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posX = gestionObjetos->monedas[gestionObjetos->monedasActual].posX;
+						registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posY = gestionObjetos->monedas[gestionObjetos->monedasActual].posY;
+						registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].idItem = 'm';
+						registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seRecogioElItem = 0;
+						registroMundo->cantidadRecompensas ++;*/
 
+						gestionObjetos->monedasActual ++;
 
 						if (registroMundo->cantidadMuertos < 1000)
 						{
@@ -3353,7 +3419,6 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 		}
 	}
 
-
 	/////////////////////////////////////////////////////////////////////// Colisiones slimes y jugador
 	for (int i = 0; i < MAX_ENEMIGOS; i++)
 	{
@@ -3380,7 +3445,6 @@ void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestio
 						gestionObjetos->monedas[gestionObjetos->monedasActual].posY = gestionEnemigos->slime[i].posY;
 						gestionObjetos->monedas[gestionObjetos->monedasActual].activa = 1;
 						gestionObjetos->monedasActual ++;
-
 
 						if (registroMundo->cantidadMuertos < 1000)
 						{
@@ -3655,6 +3719,15 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 		{
 			gestionObjetos->mapaVerde.activa = 0;	
 			gestionObjetos->mapaVerde.seObtuvo = 1;
+			
+			//Al recoger el item se guarda la accion misma
+			for (int i = 0; i < MAX_REGISTROS; i++)
+			{
+				if (registroMundo->registroRecompensas[i].idItem == 'v')
+				{
+					registroMundo->registroRecompensas[i].seRecogioElItem = 1;
+				}
+			}			
 
 			Sonido(controlAudio, 5);
 		}
@@ -3703,6 +3776,14 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 			{
 				gestionObjetos->llaves[i].activa = 0;
 				personaje.cantidadLlaves ++;
+
+				for (int j = 0; j < MAX_REGISTROS; j++)
+				{
+					if (registroMundo->registroRecompensas[j].idItem == 'l' && registroMundo->registroRecompensas[j].seRecogioElItem == 0)
+					{
+						registroMundo->registroRecompensas[j].seRecogioElItem = 1;
+					}
+				}
 
 				Sonido(controlAudio, 6);
 			}
@@ -4035,10 +4116,14 @@ void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estad
 
 		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaX = estadoMapa->actualMapaX;
 		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].mapaY = estadoMapa->actualMapaY;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posX = gestionObjetos->llaves[gestionObjetos->llavesActual].posX;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posY = gestionObjetos->llaves[gestionObjetos->llavesActual].posY;
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].idItem = 'l';
+		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seRecogioElItem = 0;
 		registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seObtuvoUnaRecompensa = 1;
 		registroMundo->cantidadRecompensas ++;
-		//Hacer un pull de objetos aleatorios, por ahora la llave
 		
+		//Se genera una llave
 		gestionObjetos->llaves[gestionObjetos->llavesActual].activa = 1;
 		gestionObjetos->llavesActual ++;
 	}
