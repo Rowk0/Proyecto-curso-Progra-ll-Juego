@@ -27,12 +27,10 @@
 //Ideas deshechadas: 
 //Movimiento de camara: implica crear otra camara estatica para cosas que no quiero que se muevan
 //Ver todas las habitaciones mientras te mueves: eso implica hacer más condicionales en enemigos, reformular cargar mapa
-//Hacer un indicador antes de la estadoMapa->sala del jefe: está de más
+//Hacer un indicador antes de la sala del jefe: está de más
 //Cerrar las puertas al entrar a una habitacion: Con el sistema de balasdisponibles, si no tuvieras balas en una habitacion cerrada pierdes instantaneamente
 
 ////////////////////////////////////////////////////////////////  tareas
-
-//Boton ranking en pantalla reiniciar, boton volver menu, y boton reiniciar donde inicias inmediatamente el juego
 
 //retencion de objetos como la moneda, llaves, y objetos del cofre
 
@@ -139,8 +137,6 @@ typedef struct
 	int rangoDeBalas;
 	int indiceEnemigo;
 	int cadencia;
-
-	//Control de movimiento del jefe
 	int timerMovimientoJefe;
 } enemigo;
  
@@ -293,6 +289,9 @@ typedef struct
 	int mouseEnPlay;
 	int mouseEnRanking;
 	int mouseEnVolver;
+	int mouseEnReiniciar;
+	int mouseEnVolverAlMenu;
+	int pantallaReiniciar;
 } controlMenu_;
 
 typedef struct 
@@ -399,8 +398,8 @@ void VerificarSalaVacia(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMa
 void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo);
 void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, controlAudio_ *controlAudio);
 void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, controlAudio_ *controlAudio);
-void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
-void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu);
+void RenderReiniciar(ALLEGRO_FONT *fuenteJuego, controlMenu_ *controlMenu, ranking_ *ranking);
+void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu, FILE *archivoRanking, ranking_ *ranking, controlAudio_ *controlAudio);
 void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador);
 void GetRanking(FILE *archivoRanking, ranking_ *ranking);
 void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
@@ -421,8 +420,8 @@ int main(int argc, char **argv)
 	estadoJuego_ estadoJuego;
 
 	estadoJuego.JUEGO = 0;
-	estadoJuego.MENU = 0; /////////////DEBE EMPEZAR EN 1
-	estadoJuego.REINICIAR = 1;
+	estadoJuego.MENU = 1; 
+	estadoJuego.REINICIAR = 0;
 	estadoJuego.SISTEMA = 1;
 
 	//Archivos
@@ -532,13 +531,15 @@ int main(int argc, char **argv)
 			al_rest(0.016);
 		}
 
+		controlMenu.pantallaReiniciar = 1;
+
 		while (estadoJuego.REINICIAR)
 		{
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
-			RenderReiniciar(fuenteJuego);
+			RenderReiniciar(fuenteJuego, &controlMenu, &ranking);
 
-			LogicaReiniciar(&estadoJuego, &estadoSistema, &controlMenu);
+			LogicaReiniciar(&estadoJuego, &estadoSistema, &controlMenu, archivoRanking, &ranking, &controlAudio);
 
 			al_rest(0.016);
 		}
@@ -879,35 +880,169 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 	}
 }
 
-void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu)
+void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu, FILE *archivoRanking, ranking_ *ranking, controlAudio_ *controlAudio)
 {
-	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 500, 300, 100))
+	//Pantalla reiniciar
+	if (controlMenu->pantallaReiniciar)
 	{
-		if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+		//Si el mouse está dentro del rectangulo del boton
+		if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 500, 300, 100))
 		{
-			estadoJuego->MENU = 1;
-			estadoJuego->REINICIAR = 0;
+			if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+			{
+				estadoJuego->JUEGO = 1;
+				estadoJuego->REINICIAR = 0;
+			}
+
+			if (!controlMenu->mouseEnReiniciar)
+			{
+				Sonido(controlAudio, 3);
+			}
+
+			controlMenu->mouseEnReiniciar = 1;
+		}
+
+		if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 730, 720, 500, 100))
+		{
+			if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+			{
+				estadoJuego->MENU = 1;
+				estadoJuego->REINICIAR = 0;
+			}
+
+			if (!controlMenu->mouseEnVolverAlMenu)
+			{
+				Sonido(controlAudio, 3);
+			}
+			
+			controlMenu->mouseEnVolverAlMenu = 1;
+		}
+
+		if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 610, 300, 100))
+		{
+			if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+			{
+				controlMenu->verdaderaPantallaRanking = 1;
+				controlMenu->pantallaReiniciar = 0;
+
+				GetRanking(archivoRanking, ranking);
+			}
+
+			if (!controlMenu->mouseEnRanking)
+			{
+				Sonido(controlAudio, 3);
+			}
+
+			controlMenu->mouseEnRanking = 1;
+		}
+
+		//Si el mouse está fuera de los rectangulos reiniciar, volver al menu y ranking
+		if (!Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 500, 300, 100))
+		{
+			controlMenu->mouseEnReiniciar = 0;
+		}
+
+		if (!Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 610, 300, 100))
+		{
+			controlMenu->mouseEnRanking = 0;
+		}
+
+		if (!Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 730, 720, 500, 100))
+		{
+			controlMenu->mouseEnVolverAlMenu = 0;
+		}
+	}
+
+	//pantalla ranking
+	if (controlMenu->verdaderaPantallaRanking)
+	{
+		if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 100, 930, 200, 70))
+		{
+			if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
+			{
+				controlMenu->verdaderaPantallaRanking = 0;
+				controlMenu->pantallaReiniciar = 1;
+			}
+
+			if (controlMenu->mouseEnVolver == 0)
+			{
+				Sonido(controlAudio, 3);
+			}
+			
+			controlMenu->mouseEnVolver = 1;
+		}
+
+		//Si el mouse esta fuera del boton volver, mouse en volver descativado
+		if (!Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 100, 930, 200, 70))
+		{		
+			controlMenu->mouseEnVolver = 0;
 		}
 	}
 }
 
-void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
+void RenderReiniciar(ALLEGRO_FONT *fuenteJuego, controlMenu_ *controlMenu, ranking_ *ranking)
 {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 	
-	al_draw_filled_rectangle(800, 500, 1100, 600, al_map_rgb(255, 255, 255));
+	if (controlMenu->pantallaReiniciar)
+	{
+		al_draw_filled_rectangle(800, 500, 1100, 600, al_map_rgb(0, 0, 0));
 
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 810, 530, 0, "Reiniciar");
+		if (controlMenu->mouseEnReiniciar)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 810, 530, 0, "Reiniciar");
+		}
+		else 
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 810, 530, 0, "Reiniciar");
+		}
 
-	al_draw_filled_rectangle(800, 610, 1100, 710, al_map_rgb(255, 255, 255));
+		al_draw_filled_rectangle(800, 610, 1100, 710, al_map_rgb(0, 0, 0));
 
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 840, 640, 0, "Ranking");
+		if (controlMenu->mouseEnRanking)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 840, 640, 0, "Ranking");
+		} 
+		else
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 840, 640, 0, "Ranking");
+		}
 
-	al_draw_filled_rectangle(730, 720, 1230, 820, al_map_rgb(255, 255, 255));
+		al_draw_filled_rectangle(730, 720, 1230, 820, al_map_rgb(0, 0, 0));
 
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 750, 740, 0, "Volver al menu");
+		if (controlMenu->mouseEnVolverAlMenu)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 750, 740, 0, "Volver al menu");
+		}
+		else
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 750, 740, 0, "Volver al menu");
+		}
+	}	
 
+	if (controlMenu->verdaderaPantallaRanking)
+	{
+		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 150, 50, 0, "=====================RANKING=====================");
+
+		for (int i = 0; i < ranking->indiceNombres; i++)
+		{
+			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 400, 100 + i * 40, 0, "%s", ranking->nombres[i]);
+			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 1500, 100 + i * 40, 0, "%d", ranking->puntajes[i]);
+		}
+
+		//al_draw_filled_rectangle(100, 930, 300, 1000, al_map_rgb(0, 0, 0));
+	
+		if (controlMenu->mouseEnVolver == 1)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 100, 950, 0, "volver");
+		}
+		else 
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 950, 0, "volver");
+		}
+	}
+	
 	////////////////////////////////////////////////
 	al_flip_display();
 }
