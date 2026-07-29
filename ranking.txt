@@ -18,3 +18,4 @@ awf 40
 awd 40
 awd 100
 HOlap 440
+as 600

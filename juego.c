@@ -32,17 +32,15 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//Mejorar diseño mapas diana
-
 //Boton ranking en pantalla reiniciar, boton volver menu, y boton reiniciar donde inicias inmediatamente el juego
 
 //retencion de objetos como la moneda, llaves, y objetos del cofre
 
 //Mejorar diseño mapa cofre y fogata
 
-//animacion de entrada (Breve), indicar objetivos (lore breve)
-
 //Buscar funciones largas y simplificarlas, dividir en más funciones
+
+//animacion de entrada (Breve), indicar objetivos (lore breve)
 
 //ideas:
 //minimapa
@@ -402,12 +400,13 @@ void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estad
 void ColicionInteractuables(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, controlAudio_ *controlAudio);
 void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, controlAudio_ *controlAudio);
 void RenderReiniciar(ALLEGRO_FONT *fuenteJuego);
-void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema);
+void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu);
 void SetRanking(FILE *archivoRanking, ranking_ *ranking, char RegistrarJugador[LARGO_TEXTO], int puntajeDelJugador);
 void GetRanking(FILE *archivoRanking, ranking_ *ranking);
 void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices_ *controlIndices, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void Musica(controlAudio_ *controlAudio, char *nombreMusica);
 void Sonido(controlAudio_ *controlAudio, int indiceSonido);
+void ColisionMapaBalas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION]);
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
@@ -422,8 +421,8 @@ int main(int argc, char **argv)
 	estadoJuego_ estadoJuego;
 
 	estadoJuego.JUEGO = 0;
-	estadoJuego.MENU = 1;
-	estadoJuego.REINICIAR = 0;
+	estadoJuego.MENU = 0; /////////////DEBE EMPEZAR EN 1
+	estadoJuego.REINICIAR = 1;
 	estadoJuego.SISTEMA = 1;
 
 	//Archivos
@@ -539,7 +538,7 @@ int main(int argc, char **argv)
 
 			RenderReiniciar(fuenteJuego);
 
-			LogicaReiniciar(&estadoJuego, &estadoSistema);
+			LogicaReiniciar(&estadoJuego, &estadoSistema, &controlMenu);
 
 			al_rest(0.016);
 		}
@@ -880,9 +879,9 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 	}
 }
 
-void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema)
+void LogicaReiniciar(estadoJuego_ *estadoJuego, estadoSistema_ *estadoSistema, controlMenu_ *controlMenu)
 {
-	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, TAMANHO + 140, 20 + TAMANHO))
+	if (Colicion(mouse.posX, mouse.posY, mouse.tamanho, mouse.tamanho, 800, 500, 300, 100))
 	{
 		if(al_mouse_button_down(&estadoSistema->mouse, ALLEGRO_MOUSE_BUTTON_LEFT))
 		{
@@ -897,9 +896,17 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego)
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	//////////////////////////////////////////////// Dibujar en este espacio
 	
-	al_draw_filled_rectangle(LARGO_PANTALLA / 2 - 120, ANCHO_PANTALLA / 2 + 180, LARGO_PANTALLA / 2 + TAMANHO + 20, ANCHO_PANTALLA / 2 + 200 + TAMANHO, al_map_rgb(102, 0, 161));
+	al_draw_filled_rectangle(800, 500, 1100, 600, al_map_rgb(255, 255, 255));
 
-	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), LARGO_PANTALLA / 2 - 100, ANCHO_PANTALLA / 2 + 200, 0, "Reiniciar");
+	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 810, 530, 0, "Reiniciar");
+
+	al_draw_filled_rectangle(800, 610, 1100, 710, al_map_rgb(255, 255, 255));
+
+	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 840, 640, 0, "Ranking");
+
+	al_draw_filled_rectangle(730, 720, 1230, 820, al_map_rgb(255, 255, 255));
+
+	al_draw_text(fuenteJuego, al_map_rgb(0, 255, 255), 750, 740, 0, "Volver al menu");
 
 	////////////////////////////////////////////////
 	al_flip_display();
@@ -957,8 +964,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.especial == 0)
 			{
 				gestionObjetos->mapaVerde.activa = 1;
-				gestionObjetos->mapaVerde.posX = LARGO_PANTALLA / 2;
-				gestionObjetos->mapaVerde.posY = ANCHO_PANTALLA / 2;
+				gestionObjetos->mapaVerde.posX = 8 * TAMANHO;
+				gestionObjetos->mapaVerde.posY = 3 * TAMANHO;
 				gestionObjetos->mapaVerde.especial = 1;
 			}
 		}
@@ -1045,16 +1052,9 @@ void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, controlAudi
 			personaje.bala[i].posX += personaje.bala[i].anguloBalaX;
 			personaje.bala[i].posY += personaje.bala[i].anguloBalaY;
 		}
-
-		//Cuando colisiona con una pared se desactiva
-		if (ColisionMapa(estadoMapa->sala, personaje.bala[i].posX, personaje.bala[i].posY) || 
-		ColisionMapa(estadoMapa->sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY) || 
-		ColisionMapa(estadoMapa->sala, personaje.bala[i].posX + (TAMANHO/4) - 1, personaje.bala[i].posY + (TAMANHO/4) - 1) ||
-		ColisionMapa(estadoMapa->sala, personaje.bala[i].posX, personaje.bala[i].posY + (TAMANHO/4) - 1))
-		{
-			personaje.bala[i].activa = 0;
-		}
 	}
+
+	ColisionMapaBalas(estadoMapa->sala);
 }
 
 void DisparoEnemigos(gestionEnemigos_ *gestionEnemigos, estadoMapa_ *estadoMapa, controlAudio_ *controlAudio)
@@ -1867,9 +1867,9 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 	//C techo piedra
 	//P piedra 
 	//o ventana
-	//m gestionEnemigos->mago enemigo
-	//A gestionEnemigos->aranha enemiga
-	//s gestionEnemigos->slime enemigo
+	//m mago enemigo
+	//A aranha enemiga
+	//s slime enemigo
 	//a objetivo importante ya puesto
 	//v objetivo importante ya puesto
 	//n objetivo importante ya puesto
@@ -2235,7 +2235,7 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 		}
 
 		if(mapa[fila][columna] == 'V')
-		{
+		{	
 			return true;
 		}
 
@@ -2246,6 +2246,43 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 	}
 
 	return false;
+}
+
+void ColisionMapaBalas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION])
+{
+	int paredesPosX[600];
+	int paredesPosY[600];
+	int paredActual = 0;
+
+	for (int i = 0; i < 600; i++)
+	{
+		paredesPosX[i] = 0; 
+		paredesPosY[i] = 0; 
+	}
+
+	for (int i = 0; i < FILAS_HABITACION; i++)
+	{
+		for (int j = 0; j < COLUMNAS_HABITACION; j++)
+		{
+			if (mapa[i][j] == '#' || mapa[i][j] == 'l' || mapa[i][j] == 'P' ||  mapa[i][j] == 'c')
+			{
+				paredesPosX[paredActual] = j * TAMANHO;
+				paredesPosY[paredActual] = i * TAMANHO;
+				paredActual++;
+			}
+		}
+	}
+
+	for (int i = 0; i < MAX_BALAS; i++)
+	{
+		for (int j = 0; j < 600; j++)
+		{
+			if (Colicion(personaje.bala[i].posX, personaje.bala[i].posY, TAMANHO / 4, TAMANHO / 4, paredesPosX[j], paredesPosY[j], TAMANHO, TAMANHO))
+			{
+				personaje.bala[i].activa = 0;
+			}
+		}
+	}
 }
 
 bool Colicion(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
@@ -3853,60 +3890,6 @@ void LogicaDianas(estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, contro
 			gestionDianas->dianas[i].chocoConPared++;
 		}
 	}
-	
-
-	/*for (int i = 0; i < MAX_DIANAS; i++)
-	{
-		auxXDiana = gestionDianas->dianas[i].posX;
-		auxYDiana = gestionDianas->dianas[i].posY;
-
-		if (gestionDianas->dianas[i].auxRanDianas == 0)
-		{
-			gestionDianas->dianas[i].auxRanDianas = rand() % 2 + 1;
-		}
-		
-		if (gestionDianas->dianas[i].auxRanDianas == 1 && gestionDianas->dianas[i].activa != 0)
-		{
-			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 == 0)
-			{
-				gestionDianas->dianas[i].posX += gestionDianas->dianas[i].velocidad;
-			} 
-			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 != 0)
-			{
-				gestionDianas->dianas[i].posX -= gestionDianas->dianas[i].velocidad;
-			}
-
-			if (ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY + TAMANHO - 1) ||
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY + TAMANHO - 1))
-			{
-				gestionDianas->dianas[i].posX = auxXDiana;
-				gestionDianas->dianas[i].chocoConPared++;
-			}
-		}
-		
-		if (gestionDianas->dianas[i].auxRanDianas == 2 && gestionDianas->dianas[i].activa != 0)
-		{
-			if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 == 0)
-			{
-				gestionDianas->dianas[i].posY += gestionDianas->dianas[i].velocidad;
-			} 
-			else if (gestionDianas->dianas[i].activa != 0 && gestionDianas->dianas[i].chocoConPared % 2 != 0)
-			{
-				gestionDianas->dianas[i].posY -= gestionDianas->dianas[i].velocidad;
-			}
-
-			if (ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY) || 
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX + TAMANHO - 1, gestionDianas->dianas[i].posY + TAMANHO - 1) ||
-				ColisionMapa(estadoMapa->sala, gestionDianas->dianas[i].posX, gestionDianas->dianas[i].posY + TAMANHO - 1))
-			{
-				gestionDianas->dianas[i].posY = auxYDiana;
-				gestionDianas->dianas[i].chocoConPared++;
-			}
-		}
-	}*/
 }
 
 void GeneracionDeRecompensas(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo)
@@ -3969,8 +3952,9 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 
 		personaje.traspasoPuerta = 0;
 	}
-	else if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] == NULL || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] == "hab_trial.txt") //Las puertas que esten conectadas a una parte nula de mapa se reemplazan por #
+	else if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] == NULL || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] == "hab_trial.txt" || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX - 1] == "hab_punteria.txt") 
 	{
+		//Las puertas que esten conectadas a una parte nula o habitacion unica del mapa se reemplazan por #
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
 			for (int j = 0; j < COLUMNAS_HABITACION; j++)
@@ -3993,7 +3977,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		
 		personaje.traspasoPuerta = 0;
 	}
-	else if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] == NULL || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] == "hab_trial.txt")
+	else if (estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] == NULL || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] == "hab_trial.txt" || estadoMapa->mapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX + 1] == "hab_punteria.txt")
 	{
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
@@ -4041,7 +4025,7 @@ void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *ges
 		
 		personaje.traspasoPuerta = 0;
 	}
-	else if (estadoMapa->mapa[estadoMapa->actualMapaY - 1][estadoMapa->actualMapaX] == NULL)
+	else if (estadoMapa->mapa[estadoMapa->actualMapaY - 1][estadoMapa->actualMapaX] == NULL || estadoMapa->mapa[estadoMapa->actualMapaY - 1][estadoMapa->actualMapaX] == "hab_punteria.txt")
 	{
 		for (int i = 0; i < FILAS_HABITACION; i++)
 		{
@@ -4108,8 +4092,9 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
+		pullHabitaciones == NULL;
+
 		auxRand = rand() % 9 + 1;
-		auxRand = 7;
 
 		if (auxRand == 1)
 		{
@@ -4148,6 +4133,7 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 			pullHabitaciones = "hab_tienda.txt";
 		}
 
+		//////////////////////////////////////////////////////////////////////////// Garantia de salas
 		//Garantia de estadoMapa->sala
 		if (a >= cantidadHabitacionesDeseadas - 8 && tiendaGenerada == 0)
 		{
@@ -4182,11 +4168,17 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 		}
 
 		//Buscar direccion para ponerse la estadoMapa->sala
-		habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
-
 		if (strcmp(pullHabitaciones, "hab_trial.txt") == 0)
 		{
 			habitacionCardinal = 1;
+		}
+		else if (strcmp(pullHabitaciones, "hab_punteria.txt") == 0)
+		{
+			habitacionCardinal = 3;
+		}
+		else 
+		{
+			habitacionCardinal = rand() % 4 + 1; // entre 1 y 4... 1: Norte, 2: Este, 3: Sur, 4: Oeste 
 		}
 		
 		if (habitacionCardinal == 1)
