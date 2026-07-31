@@ -10,8 +10,8 @@
 #include <allegro5/allegro_acodec.h>
 #define FILAS_HABITACION 17
 #define COLUMNAS_HABITACION 30
-#define FILAS_MAPA 9
-#define COLUMNAS_MAPA 9
+#define FILAS_MAPA 10
+#define COLUMNAS_MAPA 10
 #define TAMANHO 64
 #define LARGO_TEXTO 30
 #define LARGO_SPRITES 30
@@ -32,13 +32,13 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//minimapa recogible
+//minimapa recogible IMPORTANTE
 
-//Limite en el ranking, y ordenar el puntaje de mayor a menor
+//Limite en el ranking, y ordenar el puntaje de mayor a menor IMPORTANTE
 
-//animacion de entrada (Breve), indicar objetivos (lore breve)
+//animacion de entrada (Breve), indicar objetivos (lore breve) IMPORTANTE
 
-//retencion de objetos como la moneda y objetos del cofre
+//retencion de objetos como la moneda y objetos del cofre IMPORTANTE
 
 //Mejorar diseño mapa cofre y fogata
 
@@ -244,6 +244,7 @@ typedef struct
 	objeto mapaVerde;
 	objeto mapaAzul;
 	objeto mapaNaranjo;
+	objeto minimapa;
 
 	//Contadores de los arreglos de objeto
 	int monedasActual;
@@ -324,6 +325,9 @@ typedef struct
 	//Variable que permite saber si la estadoMapa->sala actual esta vacia
 	int salaVacia;
 	int seGeneroUnaRecompensa;
+
+	int minimapa[FILAS_MAPA][COLUMNAS_MAPA];
+	int minimapaVendido;
 } estadoMapa_;
 
 typedef struct 
@@ -504,7 +508,7 @@ int main(int argc, char **argv)
 		//El entero representa la cantidad de habitaciones deseadas para generar en el mapa, va de la mano con FILAS_MAPA Y COLUMNAS_MAPA
 		GeneracionDelMapa(20, &estadoMapa); 
 
-		Musica(&controlAudio, "musica1.ogg");
+		//Musica(&controlAudio, "musica1.ogg");
 
 		while (estadoJuego.MENU)
 		{
@@ -519,7 +523,7 @@ int main(int argc, char **argv)
 
 		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
-		Musica(&controlAudio, "musica2.ogg");
+		//Musica(&controlAudio, "musica2.ogg");
 
 		while (estadoJuego.JUEGO)
 		{
@@ -1110,14 +1114,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	//Axis del mouse
 	al_get_mouse_num_axes();
 
-	//TERMINAR EL JUEGO
-	if (gestionObjetos->mapaRojo.seObtuvo == 1 && gestionObjetos->mapaAzul.seObtuvo == 1 && gestionObjetos->mapaNaranjo.seObtuvo == 1 && gestionObjetos->mapaVerde.seObtuvo == 1 && estadoJuego->REINICIAR == 0)
-	{
-		estadoJuego->JUEGO = 0;
-		estadoJuego->REINICIAR = 1;
-
-		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
-	}
+////////////////////////////////////////////////////////////////////////////////////////////////////////// gestion eventos
 
 	//Verificar dianas
 	gestionDianas->cantidadDianasDestruidas = 0;
@@ -1163,6 +1160,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 			}
 		}
 	}
+
+//////////////////////////////////////////////////////////////////////////////// Ganar o perder
 	
 	//Cambiar por una pantalla de PERDISTE o reactivar el MENU
 	if (personaje.vidas == 0)
@@ -1171,6 +1170,32 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		estadoJuego->REINICIAR = 1;
 
 		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
+	}
+
+	//TERMINAR EL JUEGO
+	if (gestionObjetos->mapaRojo.seObtuvo == 1 && gestionObjetos->mapaAzul.seObtuvo == 1 && gestionObjetos->mapaNaranjo.seObtuvo == 1 && gestionObjetos->mapaVerde.seObtuvo == 1 && estadoJuego->REINICIAR == 0)
+	{
+		estadoJuego->JUEGO = 0;
+		estadoJuego->REINICIAR = 1;
+
+		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
+	}
+
+	////////////////////////////////////////////////////////////////////// obtener minimapa, debiera de obtenerse una vez
+
+	for (int i = 0; i < FILAS_MAPA; i++)
+	{
+		for (int j = 0; j < COLUMNAS_MAPA; j++)
+		{
+			if (estadoMapa->mapa[i][j] != NULL)
+			{
+				estadoMapa->minimapa[i][j] = 1;
+			}
+			else if (estadoMapa->mapa[i][j] == NULL)
+			{
+				estadoMapa->minimapa[i][j] = 0;
+			}
+		}
 	}
 }
 
@@ -1513,6 +1538,7 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 	gestionObjetos->mapaRojo.activa = 0;
 	gestionObjetos->mapaNaranjo.activa = 0;
 	gestionObjetos->mapaVerde.activa = 0;
+	gestionObjetos->minimapa.activa = 0;
 
 	//Reinicio Interactuables
 	for (int i = 0; i < MAX_INTERACTUABLES; i++)
@@ -1580,6 +1606,15 @@ char cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 			{
 				jugador->posX = j * TAMANHO;
 				jugador->posY = i * TAMANHO;
+			}
+
+			if (mapa[i][j] == 'M' && estadoMapa->minimapaVendido == 0)
+			{
+				gestionObjetos->minimapa.activa = 1;
+				gestionObjetos->minimapa.posX = j * TAMANHO;
+				gestionObjetos->minimapa.posY = i * TAMANHO - 30;
+				gestionObjetos->minimapa.seVende = 1;
+				gestionObjetos->minimapa.precio = 10;
 			}
 
 			if (mapa[i][j] == '+')
@@ -2118,7 +2153,7 @@ void DibujarMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMA
 				al_draw_bitmap_region(spriteSheet, 7 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
 
-			if (mapa[i][j] == '+')
+			if (mapa[i][j] == '+' || mapa[i][j] == 'M')
 			{
 				al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 15 * TAMANHO, TAMANHO, TAMANHO, j * TAMANHO, i * TAMANHO, 0);
 			}
@@ -2385,11 +2420,70 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		}
 	}
 	
+	if (gestionObjetos->minimapa.activa == 1 && gestionObjetos->minimapa.seVende == 1)
+	{
+		al_draw_bitmap_region(spriteSheetIcons, 7 * TAMANHO, 0 * TAMANHO, TAMANHO, TAMANHO, gestionObjetos->minimapa.posX, gestionObjetos->minimapa.posY, 0);
+		al_draw_textf(fuenteJuego, al_map_rgb(192, 192, 192), gestionObjetos->minimapa.posX, gestionObjetos->minimapa.posY + 100, 0, "%d", gestionObjetos->minimapa.precio);
+	}
+	
 	//Dibujo enemigos
 	AnimacionEnemigos(spriteSheet, gestionEnemigos, estadoSistema);
 	
 	//Puntero del mouse
 	al_draw_scaled_bitmap(spriteSheetCrosshair, 10 * 16, 3 * 16, 16, 16, mouse.posX - 30, mouse.posY - 32, TAMANHO, TAMANHO, 0);
+
+	////////////////////////////////////////////Render minimapa
+
+	if (al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_TAB))
+	{
+		al_draw_filled_rectangle(0, 0, 2000, 2000, al_map_rgba(0, 0, 0, 128));
+
+		estadoMapa->minimapa[estadoMapa->actualMapaY][estadoMapa->actualMapaX] = 2;
+
+		if (estadoMapa->minimapaVendido == 1)
+		{
+			for (int i = 0; i < FILAS_MAPA; i++)
+			{
+				for (int j = 0; j < COLUMNAS_MAPA; j++)
+				{
+					if (estadoMapa->minimapa[i][j] == 1)
+					{
+						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO, 100 + i * TAMANHO + TAMANHO, al_map_rgba(255, 255, 255, 255));
+					}	
+					if (estadoMapa->minimapa[i][j] == 0)
+					{
+						//al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO, 100 + i * TAMANHO + TAMANHO, al_map_rgb(255, 255, 0));
+					}	
+					if (estadoMapa->minimapa[i][j] == 2)
+					{
+						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO, 100 + i * TAMANHO + TAMANHO, al_map_rgba(255, 0, 0, 255));
+					}	
+				}
+			}
+		}
+
+		if (gestionObjetos->mapaNaranjo.seObtuvo == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 700, 750, 0);
+		}
+
+		if (gestionObjetos->mapaRojo.seObtuvo == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 8 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 750, 750, 0);
+		}
+
+		if (gestionObjetos->mapaAzul.seObtuvo == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 9 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 800, 750, 0);
+		}
+
+		if (gestionObjetos->mapaVerde.seObtuvo == 1)
+		{
+			al_draw_bitmap_region(spriteSheetIcons, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 850, 750, 0);
+		}
+	}
+	
+	/////////////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////
 	al_flip_display();
@@ -2510,6 +2604,9 @@ void InitAllegro()
 
 	//Se abre un mixer donde 10 sonidos suceden a la vez 
 	al_reserve_samples(10);
+
+	//Inicializar colores transparentes
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 }
 
 void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
@@ -3829,6 +3926,19 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 			}
 		}
 
+		//Colicion con el minimapa de la tienda
+		if (gestionObjetos->minimapa.activa != 0 && gestionObjetos->minimapa.seVende == 1 && personaje.cantidadMonedas >= gestionObjetos->minimapa.precio)
+		{
+			if (Colicion(personaje.posX, personaje.posY, TAMANHO, TAMANHO, gestionObjetos->minimapa.posX, gestionObjetos->minimapa.posY, TAMANHO, TAMANHO))
+			{
+				estadoMapa->minimapaVendido = 1;
+				Sonido(controlAudio, 5);
+
+				gestionObjetos->minimapa.activa = 0;
+				personaje.cantidadMonedas -= gestionObjetos->minimapa.precio;
+			}
+		}
+
 		//Colicion con mejora de Danho
 		if (gestionObjetos->mejoraDanho[i].activa != 0 && gestionObjetos->mejoraDanho[i].seVende == 0)
 		{
@@ -4312,9 +4422,8 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		pullHabitaciones == NULL;
-
 		auxRand = rand() % 9 + 1;
+		auxRand = 9;
 
 		if (auxRand == 1)
 		{
