@@ -1,11 +1,12 @@
 Mrs.Bumbleflower 1170
-EL_tio_velasquez777 0
-elpepe 0
+EL_tio_velasquez777 123
+elpepe 100
 Maximiliano_Proboste 10
 ELoy_20 10
-EL_pepaso 20gola 30
-test 0
-Elmaximoposibledecaracteresen 0
+EL_pepaso 20
+gola 30
+test 40
+Elmaximoposibledecaracteresen 700
 asd 30
 asd 270
 asd 100
