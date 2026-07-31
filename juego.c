@@ -32,13 +32,9 @@
 
 ////////////////////////////////////////////////////////////////  tareas
 
-//minimapa recogible IMPORTANTE
-
-//Limite en el ranking, y ordenar el puntaje de mayor a menor IMPORTANTE
-
 //animacion de entrada (Breve), indicar objetivos (lore breve) IMPORTANTE
 
-//retencion de objetos como la moneda y objetos del cofre IMPORTANTE
+//retencion de objetos como la moneda y objetos del cofre
 
 //Mejorar diseño mapa cofre y fogata
 
@@ -731,6 +727,8 @@ void GetRanking(FILE *archivoRanking, ranking_ *ranking)
 	char nombreLeido[LARGO_TEXTO];
 	int puntajeLeido;
 	char linea[100];
+	int auxPuntajes;
+	char auxNombres[LARGO_TEXTO];
 
 	//abrir archivo
 	archivoRanking = fopen("ranking.txt", "r");
@@ -754,6 +752,24 @@ void GetRanking(FILE *archivoRanking, ranking_ *ranking)
 
 		ranking->indiceNombres++;
 		ranking->indicePuntajes++;
+	}
+
+	//Ordenar el ranking de mayor a menor
+	for (int j = 0; j < ranking->indicePuntajes; j++)
+	{
+		for (int i = 0; i < ranking->indicePuntajes - j; i++)
+		{
+			if (ranking->puntajes[i] < ranking->puntajes[i + 1])
+			{
+				auxPuntajes = ranking->puntajes[i];
+				ranking->puntajes[i] = ranking->puntajes[i + 1];
+				ranking->puntajes[i + 1] = auxPuntajes;
+
+				strcpy(auxNombres, ranking->nombres[i]);
+				strcpy(ranking->nombres[i], ranking->nombres[i + 1]);
+				strcpy(ranking->nombres[i + 1], auxNombres);
+			}
+		}
 	}
 
 	fclose(archivoRanking);
@@ -894,7 +910,8 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 
 		al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 150, 50, 0, "=====================RANKING=====================");
 
-		for (int i = 0; i < ranking->indiceNombres; i++)
+		//Solo se muestra los primeros 20 jugadores
+		for (int i = 0; i < 20; i++)
 		{
 			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 400, 100 + i * 40, 0, "%s", ranking->nombres[i]);
 			al_draw_textf(fuenteJuego, al_map_rgb(255, 255, 255), 1500, 100 + i * 40, 0, "%d", ranking->puntajes[i]);
