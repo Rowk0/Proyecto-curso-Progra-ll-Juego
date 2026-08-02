@@ -38,6 +38,8 @@
 
 //Mejorar diseño mapa cofre y fogata
 
+//tecla tab, mov personaje, poner botones referentes encima del personaje y mouse
+
 //ideas:
 //trampas
 //Enemigo que te persiga y dispare tres balas
@@ -279,6 +281,7 @@ typedef struct
 	int REINICIAR;
 	int MENU;
 	int SISTEMA;
+	int ANIMACION_INICIAL;
 } estadoJuego_;
 
 typedef struct 
@@ -364,6 +367,16 @@ typedef struct
 	int inciciarTimerPasosJugador;
 } controlAudio_;
 
+typedef struct 
+{
+	int timer;
+	int transparencia1;
+	int transparencia2;
+	int transparencia3;
+	int transparencia4;
+	int transparencia5;
+} controlAnimacion_;
+
 ///////////////////////////////////////////////////////////////// Variables globales
 
 jugador personaje;
@@ -378,7 +391,7 @@ bool ColisionMapa(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], int jugadorP
 void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, estadoJuego_ *estadoJuego, controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, ranking_ *ranking, FILE *archivoRanking, controlAudio_ *controlAudio);
 void MovimientoJugador(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, controlAudio_ *controlAudio);
 void InitAllegro();
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, controlAnimacion_ *controlAnimacion);
 void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *ranking, ALLEGRO_EVENT_QUEUE *colaEventos, estadoSistema_ *estadoSistema);
 void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetBalas, ALLEGRO_BITMAP *spriteSheetCaminarCaballero, ALLEGRO_BITMAP *spriteSheetIcons, ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *spriteSheetCrosshair, ALLEGRO_BITMAP *spriteSheetBalasEnemigos, ALLEGRO_BITMAP *spriteSheetIconsRaven, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables);
 void Disparo(estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, controlAudio_ *controlAudio);
@@ -410,7 +423,8 @@ void DesactivarObjetosActivos(gestionEnemigos_ *gestionEnemigos,  controlIndices
 void Musica(controlAudio_ *controlAudio, char *nombreMusica);
 void Sonido(controlAudio_ *controlAudio, int indiceSonido);
 void ColisionMapaBalas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION]);
-void VerificarEventoDeSalas(gestionDianas_ *gestionDianas, registroMundo_ *registroMundo, gestionObjetos_ *gestionObjetos);
+void LogicaAnimacion(controlAnimacion_ *controlAnimacion, estadoJuego_ *estadoJuego, gestionObjetos_ *gestionObjetos);
+void RenderAnimacion(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetIcons, controlAnimacion_ *controlAnimacion, ALLEGRO_FONT *fuenteJuego);
 //Primeros cuatro parametros representan un cuadrado (x1,y1) esquina superior izquierda (w1,h1) sus tamaños, generalmente la cantidad de pixeles, en este caso 64
 //Ultimo cuatro representa otro cuadrado con otros parametros
 //Compara si hay entre colicion entre ambos, y si hay devuelve true
@@ -425,7 +439,8 @@ int main(int argc, char **argv)
 	estadoJuego_ estadoJuego;
 
 	estadoJuego.JUEGO = 0;
-	estadoJuego.MENU = 1; 
+	estadoJuego.MENU = 1;
+	estadoJuego.ANIMACION_INICIAL = 0;
 	estadoJuego.REINICIAR = 0;
 	estadoJuego.SISTEMA = 1;
 
@@ -468,6 +483,7 @@ int main(int argc, char **argv)
 	gestionInteractuables_ gestionInteractuables;
 	registroMundo_ registroMundo;
 	controlAudio_ controlAudio;
+	controlAnimacion_ controlAnimacion;
 	
 	///////////////////////////////////////////////////////////////
 
@@ -496,7 +512,7 @@ int main(int argc, char **argv)
 	//Si sistema es 0 el programa se cierra
 	while (estadoJuego.SISTEMA)
 	{
-		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
+		InitGameComponents(ventana, &mouse, &ranking, &gestionEnemigos, &gestionObjetos, &estadoSistema, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo, &controlAnimacion);
 
 		//Cargar mapa hace que se lea un archivo y genere una copia en estadoMapa->sala
 		cargarMapa(fondoMenu, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
@@ -513,6 +529,17 @@ int main(int argc, char **argv)
 			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking, estadoMapa.sala, spriteSheet, &estadoSistema, &gestionInteractuables);
 
 			LogicaMenu(&estadoJuego, &controlMenu, &ranking, colaEventos, archivoRanking, &estadoSistema, &controlAudio);
+
+			al_rest(0.016);
+		}
+
+		while (estadoJuego.ANIMACION_INICIAL)
+		{
+			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
+
+			LogicaAnimacion(&controlAnimacion, &estadoJuego, &gestionObjetos);
+
+			RenderAnimacion(spriteSheet, spriteSheetIcons, &controlAnimacion, fuenteJuego);
 
 			al_rest(0.016);
 		}
@@ -562,31 +589,81 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-//borrar
-void VerificarEventoDeSalas(gestionDianas_ *gestionDianas, registroMundo_ *registroMundo, gestionObjetos_ *gestionObjetos)
+void LogicaAnimacion(controlAnimacion_ *controlAnimacion, estadoJuego_ *estadoJuego, gestionObjetos_ *gestionObjetos)
 {
-	//Verificar dianas
-	gestionDianas->cantidadDianasDestruidas = 0;
+	controlAnimacion->timer++;
 
-	for (int i = 0; i < MAX_REGISTROS; i++)
+	if (controlAnimacion->timer > 1100) //3600 = 1 minuto
 	{
-		if (registroMundo->registroInteractuables[i].dianaDestruida != 0)
-		{
-			gestionDianas->cantidadDianasDestruidas++;
-
-			if (gestionDianas->cantidadDianasDestruidas >= 5 && gestionObjetos->mapaVerde.seObtuvo == 0)
-			{
-				gestionObjetos->mapaVerde.activa = 1;
-				gestionObjetos->mapaVerde.posX = 8 * TAMANHO;
-				gestionObjetos->mapaVerde.posY = 3 * TAMANHO;
-
-				/*registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posX = gestionObjetos->mapaVerde.posX;
-				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].posY = gestionObjetos->mapaVerde.posY;
-				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].idItem = 'v';
-				registroMundo->registroRecompensas[registroMundo->cantidadRecompensas].seRecogioElItem = 0;*/
-			}
-		}
+		estadoJuego->ANIMACION_INICIAL = 0;
+		estadoJuego->JUEGO = 1;
 	}
+}
+
+void RenderAnimacion(ALLEGRO_BITMAP *spriteSheet, ALLEGRO_BITMAP *spriteSheetIcons, controlAnimacion_ *controlAnimacion, ALLEGRO_FONT *fuenteJuego)
+{
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	//////////////////////////////////////////////// Dibujar en este espacio
+
+	for (int i = 0; i < 4; i++)
+	{
+		al_draw_bitmap_region(spriteSheet, 1 * TAMANHO, 19 * TAMANHO, TAMANHO, TAMANHO, 400 + i * TAMANHO * 5, 600, 0);
+	}
+	
+	al_draw_bitmap_region(spriteSheetIcons, 12 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 400, 530, 0);
+	
+	al_draw_bitmap_region(spriteSheetIcons, 8 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 720, 530, 0);
+	
+	al_draw_bitmap_region(spriteSheetIcons, 9 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 1040, 530, 0);
+
+	al_draw_bitmap_region(spriteSheetIcons, 10 * TAMANHO, 18 * TAMANHO, TAMANHO, TAMANHO, 1360, 530, 0);
+
+	al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 150, 0, "Encuentra los legendarios rollos magicos...");
+
+	al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 250, 0, "Nadie debe ver sus secretos.");
+
+	al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 850, 0, "Pero tu soberbia es más grande...");
+
+	al_draw_text(fuenteJuego, al_map_rgb(255, 255, 255), 100, 950, 0, "Empieza tu busqueda.");
+
+	//Debe estar en la ultima linea por jerarquia de dibujos
+	if (controlAnimacion->timer > 60 && controlAnimacion->timer < 300)
+	{
+		controlAnimacion->transparencia1--;
+	}
+
+	al_draw_filled_rectangle(0, 0, 2000, 2000, al_map_rgba(0, 0, 0, controlAnimacion->transparencia1));
+
+	if (controlAnimacion->timer > 200 && controlAnimacion->timer < 400)
+	{
+		controlAnimacion->transparencia2--;
+	}
+
+	al_draw_filled_rectangle(100, 250, 1000, 300, al_map_rgba(0, 0, 0, controlAnimacion->transparencia2));
+
+	if (controlAnimacion->timer > 400 && controlAnimacion->timer < 600)
+	{
+		controlAnimacion->transparencia3--;
+	}
+
+	al_draw_filled_rectangle(100, 850, 1500, 900, al_map_rgba(0, 0, 0, controlAnimacion->transparencia3));
+
+	if (controlAnimacion->timer > 600 && controlAnimacion->timer < 800)
+	{
+		controlAnimacion->transparencia4--;
+	}
+
+	al_draw_filled_rectangle(100, 950, 1500, 1000, al_map_rgba(0, 0, 0, controlAnimacion->transparencia4));
+
+	if (controlAnimacion->timer > 800 && controlAnimacion->transparencia5 != 255)
+	{
+		controlAnimacion->transparencia5++;
+	}
+
+	al_draw_filled_rectangle(0, 0, 2000, 2000, al_map_rgba(0, 0, 0, controlAnimacion->transparencia5));
+
+	////////////////////////////////////////////////
+	al_flip_display();
 }
 
 void Sonido(controlAudio_ *controlAudio, int indiceSonido)
@@ -1198,7 +1275,7 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
 
-	////////////////////////////////////////////////////////////////////// obtener minimapa, debiera de obtenerse una vez
+	////////////////////////////////////////////////////////////////////// rellenar minimapa
 
 	for (int i = 0; i < FILAS_MAPA; i++)
 	{
@@ -2470,7 +2547,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 				{
 					if (estadoMapa->minimapa[i][j] == 1)
 					{
-						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO, 100 + i * TAMANHO + TAMANHO, al_map_rgba(255, 255, 255, 255));
+						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO - 2, 100 + i * TAMANHO + TAMANHO - 2, al_map_rgba(255, 255, 255, 255));
 					}	
 					if (estadoMapa->minimapa[i][j] == 0)
 					{
@@ -2478,7 +2555,7 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 					}	
 					if (estadoMapa->minimapa[i][j] == 2)
 					{
-						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO, 100 + i * TAMANHO + TAMANHO, al_map_rgba(255, 0, 0, 255));
+						al_draw_filled_rectangle(500 + j * TAMANHO, 100 + i * TAMANHO, 500 + j * TAMANHO + TAMANHO - 2, 100 + i * TAMANHO + TAMANHO - 2, al_map_rgba(255, 0, 0, 255));
 					}	
 				}
 			}
@@ -2631,12 +2708,19 @@ void InitAllegro()
 	al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 }
 
-void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo)
+void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranking, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoSistema_ *estadoSistema, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo, controlAnimacion_ *controlAnimacion)
 {
 	//Inicializar ventana
 	al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);
 	ventana = al_create_display(640, 480);
 	if(!ventana) printf("Error al abrir ventana");
+
+	//Inicializando parametros de animacion
+	controlAnimacion->transparencia1 = 255;
+	controlAnimacion->transparencia2 = 255;
+	controlAnimacion->transparencia3 = 255;
+	controlAnimacion->transparencia4 = 255;
+	controlAnimacion->transparencia5 = 0;
 
 	//Inicializando objetos secundarios
 	gestionDianas->dianasActuales = 0;
@@ -2789,6 +2873,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	gestionObjetos->mapaVerde.posY = 0;
 	gestionObjetos->mapaVerde.seObtuvo = 0;
 	gestionObjetos->mapaVerde.especial = 0;
+	gestionObjetos->mapaVerde.seGenero = 0;
 
 	gestionObjetos->mapaAzul.activa = 0;
 	gestionObjetos->mapaAzul.columna = 0;
@@ -2898,6 +2983,7 @@ void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ 
 	{
 		estadoJuego->JUEGO = 0;
 		estadoJuego->MENU = 0;
+		estadoJuego->ANIMACION_INICIAL = 0;
 		estadoJuego->REINICIAR = 0;
 		estadoJuego->SISTEMA = 0;
 	}
@@ -2913,9 +2999,9 @@ void InputHandle(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ 
 
 				if (al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_ENTER))
 				{
+					estadoJuego->ANIMACION_INICIAL = 1;
 					estadoJuego->MENU = 0;
 					controlMenu->pantallaPonerNombre = 0;
-					estadoJuego->JUEGO = 1;
 				}
 				else if (al_key_down(&estadoSistema->teclado, ALLEGRO_KEY_BACKSPACE) && controlMenu->longitudNombre > 0)
 				{
