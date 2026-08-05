@@ -29,19 +29,15 @@
 //Ver todas las habitaciones mientras te mueves: eso implica hacer más condicionales en enemigos, reformular cargar mapa
 //Hacer un indicador antes de la sala del jefe: está de más
 //Cerrar las puertas al entrar a una habitacion: Con el sistema de balasdisponibles, si no tuvieras balas en una habitacion cerrada pierdes instantaneamente
-
-////////////////////////////////////////////////////////////////  tareas
-
-//Diseño:
-//fade out al iniciar estadojuegojuego
-//Mejorar diseño mapa cofre y fogata
-//Hacer mas habitaciones 2 mas
-//animacion de ganar
-
-//ideas:
 //trampas
 //Enemigo que te persiga y dispare tres balas
 //implementar mas "armas" al jugador
+
+////////////////////////////////////////////////////////////////  tareas
+
+//fade out al iniciar juego (no importante)
+//Mejorar diseño mapa cofre y fogata (no importante)
+//Hacer mas habitaciones 2 mas (no importante)
 
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
@@ -102,6 +98,7 @@ typedef struct
 	int traspasoPuerta; //1: Norte, 2: Este, 3: Sur, 4: Oeste
 	int cadencia;
 	int seMovio;
+	int ganoElJuego;
 } jugador;
 
 typedef struct 
@@ -530,7 +527,7 @@ int main(int argc, char **argv)
 		//El entero representa la cantidad de habitaciones deseadas para generar en el mapa, va de la mano con FILAS_MAPA Y COLUMNAS_MAPA
 		GeneracionDelMapa(20, &estadoMapa); 
 
-		//Musica(&controlAudio, "musica1.ogg");
+		Musica(&controlAudio, "musica1.ogg");
 
 		while (estadoJuego.MENU)
 		{
@@ -556,7 +553,7 @@ int main(int argc, char **argv)
 
 		cargarMapa(nombreHabitacion, archivoMapas, estadoMapa.sala, &personaje, &gestionEnemigos, '@', estadoMapa.actualMapaX, estadoMapa.actualMapaY, &controlIndices, &gestionObjetos, &estadoMapa, &gestionDianas, &gestionInteractuables, &registroMundo);
 
-		//Musica(&controlAudio, "musica2.ogg");
+		Musica(&controlAudio, "musica2.ogg");
 
 		while (estadoJuego.JUEGO)
 		{
@@ -1129,6 +1126,16 @@ void RenderReiniciar(ALLEGRO_FONT *fuenteJuego, controlMenu_ *controlMenu, ranki
 	{
 		al_draw_filled_rectangle(800, 500, 1100, 600, al_map_rgb(0, 0, 0));
 
+		if (personaje.ganoElJuego == 0)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 810, 130, 0, "¡PERDISTE!");
+		}
+		else if (personaje.ganoElJuego == 1)
+		{
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 810, 130, 0, "¡GANASTE!");
+			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 710, 230, 0, "Gracias por jugar");
+		}
+
 		if (controlMenu->mouseEnReiniciar)
 		{
 			al_draw_text(fuenteJuego, al_map_rgb(255, 255, 0), 810, 530, 0, "Reiniciar");
@@ -1273,6 +1280,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 		estadoJuego->JUEGO = 0;
 		estadoJuego->REINICIAR = 1;
 
+		jugador->ganoElJuego = 0;
+
 		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
 
@@ -1281,6 +1290,8 @@ void Logica(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *jugador, 
 	{
 		estadoJuego->JUEGO = 0;
 		estadoJuego->REINICIAR = 1;
+
+		jugador->ganoElJuego = 1;
 
 		SetRanking(archivoRanking, ranking, ranking->nombre, personaje.puntaje);
 	}
@@ -2132,7 +2143,7 @@ void cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionEnemigos->slime[controlIndices->slime].activa = 1;
 						gestionEnemigos->slime[controlIndices->slime].posX = j * TAMANHO;
 						gestionEnemigos->slime[controlIndices->slime].posY = i * TAMANHO;
-						gestionEnemigos->slime[controlIndices->slime].vida = 4;
+						gestionEnemigos->slime[controlIndices->slime].vida = 2;
 
 						//Registrar la ubicacion original del gestionEnemigos->slime
 						gestionEnemigos->slime[controlIndices->slime].posXGeneracion = j;
@@ -2169,7 +2180,7 @@ void cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionEnemigos->jefe.activa = 1;
 						gestionEnemigos->jefe.posX = j * TAMANHO;
 						gestionEnemigos->jefe.posY = i * TAMANHO;
-						gestionEnemigos->jefe.vida = 20;
+						gestionEnemigos->jefe.vida = 10;
 						
 						gestionEnemigos->jefe.posXGeneracion = j;
 						gestionEnemigos->jefe.posYGeneracion = i;
@@ -2199,7 +2210,7 @@ void cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionEnemigos->mago[controlIndices->mago].activa = 1;
 						gestionEnemigos->mago[controlIndices->mago].posX = j * TAMANHO;
 						gestionEnemigos->mago[controlIndices->mago].posY = i * TAMANHO;
-						gestionEnemigos->mago[controlIndices->mago].vida = 4;
+						gestionEnemigos->mago[controlIndices->mago].vida = 2;
 
 						//Registrar la ubicacion original del gestionEnemigos->slime
 						gestionEnemigos->mago[controlIndices->mago].posXGeneracion = j;
@@ -2236,7 +2247,7 @@ void cargarMapa(char nombreMapa[LARGO_TEXTO], FILE *archivoMapa, char mapa[FILAS
 						gestionEnemigos->aranha[controlIndices->aranha].activa = 1;
 						gestionEnemigos->aranha[controlIndices->aranha].posX = j * TAMANHO;
 						gestionEnemigos->aranha[controlIndices->aranha].posY = i * TAMANHO;
-						gestionEnemigos->aranha[controlIndices->aranha].vida = 2;
+						gestionEnemigos->aranha[controlIndices->aranha].vida = 1;
 
 						gestionEnemigos->aranha[controlIndices->aranha].posXGeneracion = j;
 						gestionEnemigos->aranha[controlIndices->aranha].posYGeneracion = i;
@@ -2861,13 +2872,13 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 	estadoMapa->minimapaVendido = 0;
 
 	//Inicializando jugador
-	personaje.velocidad = 16; ////////// 7
+	personaje.velocidad = 10; ////////// 7
 	personaje.animacionJugador = 0;
 	personaje.dirJugador.derecha = 0;
 	personaje.dirJugador.izquierda = 1;
 	personaje.vidas = 6;
 	personaje.invulnerable = 0;
-	personaje.cantidadMonedas = 10; ///////// 0
+	personaje.cantidadMonedas = 5; ///////// 0
 	personaje.cantidadLlaves = 1; //////////////// originalmente 0
 	personaje.rangoDeBalas = 400;
 	personaje.balasrestantes = MAX_BALAS;
@@ -2931,7 +2942,7 @@ void InitGameComponents(ALLEGRO_DISPLAY *ventana, mouse_ *mouse, ranking_ *ranki
 		personaje.bala[i].posY = 0;
 		personaje.bala[i].velocidad = 10;		
 		personaje.bala[i].activa = 0;
-		personaje.bala[i].danho = 10; //////// 1              
+		personaje.bala[i].danho = 1; //////// 1              
 		personaje.bala[i].anguloBalaX = 0;
 		personaje.bala[i].anguloBalaY = 0;
 		personaje.bala[i].seDisparo = 0;
@@ -4060,6 +4071,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 		{
 			gestionObjetos->mapaRojo.activa = 0;	
 			gestionObjetos->mapaRojo.seObtuvo = 1;
+			personaje.puntaje += 100;
 
 			Sonido(controlAudio, 5);
 
@@ -4079,6 +4091,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 		{
 			gestionObjetos->mapaAzul.activa = 0;	
 			gestionObjetos->mapaAzul.seObtuvo = 1;
+			personaje.puntaje += 100;
 
 			Sonido(controlAudio, 5);
 		}
@@ -4090,6 +4103,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 		{
 			gestionObjetos->mapaVerde.activa = 0;	
 			gestionObjetos->mapaVerde.seObtuvo = 1;
+			personaje.puntaje += 100;
 			
 			//Al recoger el item se guarda la accion misma
 			for (int i = 0; i < MAX_REGISTROS; i++)
@@ -4110,6 +4124,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 		{
 			gestionObjetos->mapaNaranjo.activa = 0;
 			gestionObjetos->mapaNaranjo.seObtuvo = 1;
+			personaje.puntaje += 100;
 
 			Sonido(controlAudio, 5);
 		}
@@ -4127,6 +4142,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 				{
 					gestionObjetos->monedas[i].activa = 0;
 					personaje.cantidadMonedas += 10;
+					personaje.puntaje += 10;
 
 					Sonido(controlAudio, 1);
 
@@ -4142,6 +4158,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 				{
 					gestionObjetos->monedas[i].activa = 0;
 					personaje.cantidadMonedas ++;
+					personaje.puntaje += 1;
 
 					Sonido(controlAudio, 1);
 
@@ -4163,6 +4180,7 @@ void ColicionObjetos(gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, r
 			{
 				gestionObjetos->llaves[i].activa = 0;
 				personaje.cantidadLlaves ++;
+				personaje.puntaje += 10;
 
 				for (int j = 0; j < MAX_REGISTROS; j++)
 				{
@@ -4804,7 +4822,7 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 	
 	while (a < cantidadHabitacionesDeseadas)
 	{
-		auxRand = rand() % 10 + 1;
+		auxRand = rand() % 11 + 1;
 
 		if (auxRand == 1)
 		{
@@ -4845,6 +4863,10 @@ void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa
 		else if (auxRand == 10)
 		{
 			pullHabitaciones = "hab_general_5.txt";  
+		}
+		else if (auxRand == 11)
+		{
+			pullHabitaciones = "hab_general_6.txt";  
 		}
 
 		//////////////////////////////////////////////////////////////////////////// Garantia de salas

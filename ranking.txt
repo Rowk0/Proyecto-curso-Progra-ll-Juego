@@ -5,3 +5,7 @@ faust 360
 faust 560
 lirabascunan 940asd 70
 asd 110
+asd 253
+asd 400
+asd 400
+asd 400
