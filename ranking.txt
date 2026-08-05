@@ -3,4 +3,5 @@ faust 170
 faust 360
 faust 360
 faust 560
-lirabascunan 940
+lirabascunan 940asd 70
+asd 110
