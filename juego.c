@@ -39,6 +39,8 @@
 //Mejorar diseño mapa cofre y fogata (no importante)
 //Hacer mas habitaciones 2 mas (no importante)
 
+//no se repitan los mapas (no importante)
+
 /////////////////////////////////////////////////////////////////  flujo trabajo
 
 //gcc juego.c -o juego -lallegro -lallegro_main -lallegro_primitives -lallegro_image -lm -lallegro_ttf -lallegro_font -lallegro_audio -lallegro_acodec
@@ -403,7 +405,7 @@ void AnimacionEnemigos(ALLEGRO_BITMAP *spriteSheet, gestionEnemigos_ *gestionEne
 void LogicaEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo, controlAudio_ *controlAudio);
 void ColisionEnemigos(gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, registroMundo_ *registroMundo, controlAudio_ *controlAudio);
 void CambioDeHabitaciones(controlIndices_ *controlIndices, gestionEnemigos_ *gestionEnemigos, gestionObjetos_ *gestionObjetos, estadoMapa_ *estadoMapa, gestionDianas_ *gestionDianas, gestionInteractuables_ *gestionInteractuables, registroMundo_ *registroMundo);
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *titulo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables);
 void PersonajeInvulnerable();
 void VerificarTraspasoPuertas(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], jugador *personaje);
 void GeneracionDelMapa(int cantidadHabitacionesDeseadas, estadoMapa_ *estadoMapa);
@@ -464,7 +466,7 @@ int main(int argc, char **argv)
 	ALLEGRO_BITMAP *spriteSheetIcons;
 	ALLEGRO_BITMAP *spriteSheetCrosshair;
 	ALLEGRO_BITMAP *spriteSheetBalasEnemigos;
-	ALLEGRO_BITMAP *menuFondo;
+	ALLEGRO_BITMAP *titulo;
 	ALLEGRO_BITMAP *spriteSheetIconsRaven;
 	ALLEGRO_BITMAP *spriteSheetBotonesTeclado;
 	ALLEGRO_BITMAP *spriteSheetBotonesMouse;
@@ -505,7 +507,7 @@ int main(int argc, char **argv)
 	fuenteJuego = al_load_ttf_font("PressStart2P-Regular.ttf", 32, 0);
 
 	//Cargar Sprites
-	menuFondo = al_load_bitmap("menu_fondo.png");
+	titulo = al_load_bitmap("Sylvanus.png");
 	spriteSheet = al_load_bitmap("64x64.png");
 	spriteSheetBalas = al_load_bitmap("sp_guns.png");
 	spriteSheetCaminarCaballero = al_load_bitmap("64x64_caminar.png");
@@ -533,12 +535,14 @@ int main(int argc, char **argv)
 		{
 			InputHandle(&estadoJuego, &controlMenu, &ranking, colaEventos, &estadoSistema);
 
-			RenderMenu(fuenteJuego, menuFondo, &controlMenu, &ranking, estadoMapa.sala, spriteSheet, &estadoSistema, &gestionInteractuables);
+			RenderMenu(fuenteJuego, titulo, &controlMenu, &ranking, estadoMapa.sala, spriteSheet, &estadoSistema, &gestionInteractuables);
 
 			LogicaMenu(&estadoJuego, &controlMenu, &ranking, colaEventos, archivoRanking, &estadoSistema, &controlAudio);
 
 			al_rest(0.016);
 		}
+
+		Musica(&controlAudio, "musica3.ogg");
 
 		while (estadoJuego.ANIMACION_INICIAL)
 		{
@@ -930,7 +934,7 @@ void LogicaMenu(estadoJuego_ *estadoJuego, controlMenu_ *controlMenu, ranking_ *
 	}
 }
 
-void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables)
+void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *titulo, controlMenu_ *controlMenu, ranking_ *ranking, char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *spriteSheet, estadoSistema_ *estadoSistema, gestionInteractuables_ *gestionInteractuables)
 {
 	estadoSistema->controlSpritesMenu++;
 
@@ -942,7 +946,9 @@ void RenderMenu(ALLEGRO_FONT *fuenteJuego, ALLEGRO_BITMAP *menuFondo, controlMen
 
 		DibujarMapa(mapa, spriteSheet, estadoSistema, gestionInteractuables);
 
-		//al_draw_scaled_bitmap(menuFondo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 0, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+		al_draw_scaled_bitmap(titulo, 0, 0, LARGO_PANTALLA, ANCHO_PANTALLA, 480, 0, LARGO_PANTALLA + 760, ANCHO_PANTALLA + 435, 0);
+
+		//al_draw_bitmap(titulo, 600, 100, 0);
 
 		//Boton jugar (En negro para disimular con fondo)
 		al_draw_filled_rectangle(840, 524, 1044, 608, al_map_rgb(0, 0, 0));
@@ -2671,7 +2677,8 @@ void Render(char mapa[FILAS_HABITACION][COLUMNAS_HABITACION], ALLEGRO_BITMAP *sp
 		}
 		else
 		{
-			al_draw_scaled_bitmap(spriteSheetIcons, 12 * TAMANHO, 0 * TAMANHO, TAMANHO, TAMANHO, 800, 400, TAMANHO * 5, TAMANHO * 5, 0);
+			al_draw_scaled_bitmap(spriteSheetIcons, 12 * TAMANHO, 0 * TAMANHO, TAMANHO, TAMANHO, 900, 500, TAMANHO * 2, TAMANHO * 2, 0);
+			al_draw_scaled_bitmap(spriteSheetIcons, 7 * TAMANHO, 0 * TAMANHO, TAMANHO, TAMANHO, 800, 500, TAMANHO * 2, TAMANHO * 2, 0);
 		}
 		
 
